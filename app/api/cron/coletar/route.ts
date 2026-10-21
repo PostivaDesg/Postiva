@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { isCron } from '@/lib/cron';
 import { collectBatches } from '@/lib/batch';
 
-export const maxDuration = 800;
+export const maxDuration = 300; // plano grátis da Vercel: máximo 300s (no Pro pode subir para 800)
 
 export async function GET(req: Request) {
   if (!isCron(req)) return NextResponse.json({ error: 'não autorizado' }, { status: 401 });
