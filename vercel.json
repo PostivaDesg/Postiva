@@ -1,0 +1,7 @@
+{
+  "crons": [
+    { "path": "/api/cron/semana", "schedule": "0 12 * * 0" },
+    { "path": "/api/cron/coletar", "schedule": "0 15 * * *" },
+    { "path": "/api/cron/alertas", "schedule": "0 11 * * *" }
+  ]
+}

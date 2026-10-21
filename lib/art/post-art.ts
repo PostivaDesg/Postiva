@@ -1,0 +1,48 @@
+// Monta a arte de um post com o modelo da empresa.
+import { supabaseAdmin } from '../supabase';
+import { normalizeSpec, toTheme } from './theme';
+import { renderArt } from './render';
+import { assetById, assetDataUrl, logoDataUrl } from './assets';
+import { directionById } from '../styles';
+import { BRAND } from '../brand-config';
+
+const brl = (n: number | null | undefined) => (n == null ? null : Number(n).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }));
+const br = (d?: string | null) => (d ? d.split('-').reverse().slice(0, 2).join('/') : '');
+
+export async function companyTheme(company: any) {
+  return toTheme(normalizeSpec(company.template_spec ?? {}, directionById(company.art_style).layouts));
+}
+
+export async function renderPostArt(postId: string) {
+  const db = supabaseAdmin();
+  const { data: p } = await db.from('posts').select('*').eq('id', postId).single();
+  if (!p) return null;
+  const { data: company } = await db.from('companies').select('*').eq('id', p.company_id).single();
+  if (!company) return null;
+
+  // Promoção: foto, preço e validade vêm do item da promoção
+  let promo: any = null;
+  if (p.promo_item_ids?.length === 1) {
+    const { data } = await db.from('promo_items').select('*').eq('id', p.promo_item_ids[0]).single();
+    promo = data;
+  }
+  const photo = promo?.photo_url ?? (await assetDataUrl(await assetById(p.asset_id)));
+
+  return renderArt({
+    layout: p.layout ?? 'tipografico',
+    format: p.kind === 'post' ? 'post' : 'story',
+    theme: await companyTheme(company),
+    brandName: company.name,
+    logo: await logoDataUrl(company.id),
+    photo,
+    headline: p.art_headline || p.title,
+    sub: p.art_sub,
+    cta: p.art_cta,
+    items: p.art_items,
+    priceFrom: brl(promo?.price_from),
+    priceTo: brl(promo?.price_to),
+    validity: promo ? `Válido de ${br(promo.valid_from)} a ${br(promo.valid_until)} ou enquanto durar o estoque` : null,
+    dateLabel: p.date_label,
+    credit: p.credit ? BRAND.credit : null,
+  });
+}
