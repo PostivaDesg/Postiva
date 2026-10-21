@@ -43,7 +43,7 @@ export async function runChecks(): Promise<Check[]> {
 
   // Cobrança
   const asaasOk = await ping(async () => {
-    const r = await fetch(`${process.env.ASAAS_BASE_URL ?? 'https://api-sandbox.asaas.com/v3'}/customers?limit=1`, { headers: { access_token: process.env.ASAAS_API_KEY ?? '' } });
+    const r = await fetch(`${process.env.ASAAS_BASE_URL ?? 'https://api-sandbox.asaas.com/v3'}/customers?limit=1`, { headers: { access_token: (process.env.ASAAS_API_KEY ?? process.env.ASSAS_API_KEY ?? '') } });
     return r.ok;
   });
   add('Cobrança (Asaas)', 'Chave da API', asaasOk, true, 'Pegue a chave em Asaas > Integrações. Comece pelo sandbox (ASAAS_BASE_URL do sandbox).');

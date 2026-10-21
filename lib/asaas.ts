@@ -10,7 +10,7 @@ async function asaas<T>(path: string, init: RequestInit = {}): Promise<T> {
     ...init,
     headers: {
       'Content-Type': 'application/json',
-      access_token: process.env.ASAAS_API_KEY!,
+      access_token: (process.env.ASAAS_API_KEY ?? process.env.ASSAS_API_KEY)!, // aceita também o nome com a grafia "ASSAS"
       ...(init.headers ?? {}),
     },
   });
