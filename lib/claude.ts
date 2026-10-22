@@ -65,7 +65,9 @@ Texto DENTRO da arte (a arte é gerada automaticamente com o modelo da marca):
   Fotos reais e com vida, combinando com o assunto da peça. Se a empresa vende produtos, a foto mostra o TIPO DE PRODUTO ligado ao tema
   (ex.: post "comece o dia com energia" numa farmácia → "vitamin c orange tablets"; protetor solar → "sunscreen beach"; fralda → "baby diaper").
   Em datas comemorativas, a foto é do símbolo da data (ex.: Natal → "christmas tree ornaments"; Carnaval → "carnival confetti masks").
-  Nunca peça logotipos, marcas, caixas de remédio com nome, texto escrito ou celebridades. Use null quando a peça for só tipográfica (lista, frase, recado).
+  Nunca peça logotipos, marcas, caixas de remédio com nome, texto escrito ou celebridades.
+  art_photo é OBRIGATÓRIO em TODA peça, nunca null: arte de cor lisa sem foto não é aceita. Dica, lista ou recado também têm foto da situação
+  (ex.: "beba água" → "woman drinking water"; "pedido pelo WhatsApp" → "woman smartphone smiling"; Novembro Azul → "man doctor blue ribbon").
   Se a peça for sobre a própria loja ou a equipe, use exatamente "loja" ou "equipe" (a foto real da empresa entra no lugar).
 - art_product: quando a peça falar de UM produto. Se o contexto trouxer "Fotos de produtos da loja" e o produto estiver lá, use o nome EXATO
   da lista. Senão, escreva o produto como ele é vendido (tipo + apresentação, ex.: "vitamina C efervescente 1g", "protetor solar facial FPS 50"),
@@ -281,4 +283,21 @@ function parseJsonArray(text: string) {
   const end = text.lastIndexOf(']');
   if (start < 0 || end < 0) throw new Error('O Claude não devolveu um JSON válido.');
   return JSON.parse(text.slice(start, end + 1));
+}
+
+/** Tema de foto (busca em inglês) para peças que ficaram sem art_photo. Uma chamada curta para todas. */
+export async function photoQueries(items: { headline: string; caption?: string | null; segment?: string | null }[]) {
+  if (!items.length) return [] as string[];
+  const list = items.map((it, i) => `${i + 1}. ${it.headline}${it.caption ? ` — ${String(it.caption).slice(0, 140)}` : ''}`).join('\n');
+  const res = await anthropic.messages.create({
+    model: MODEL,
+    max_tokens: 2000,
+    messages: [{
+      role: 'user',
+      content: `Para cada post de Instagram de ${items[0].segment ?? 'uma empresa'} abaixo, escreva a busca de foto de banco EM INGLÊS (2 a 5 palavras) que mostra o produto, a pessoa ou a cena do assunto. Sem marcas, sem texto, sem remédio com nome.\n${list}\n\nResponda SÓ com um array JSON de strings, na mesma ordem.`,
+    }],
+  });
+  const text = res.content.filter((c) => c.type === 'text').map((c) => (c as { text: string }).text).join('');
+  try { const arr = JSON.parse(text.slice(text.indexOf('['), text.lastIndexOf(']') + 1)); return Array.isArray(arr) ? arr.map(String) : []; }
+  catch { return []; }
 }

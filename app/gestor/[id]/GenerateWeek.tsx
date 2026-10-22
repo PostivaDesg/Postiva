@@ -50,6 +50,12 @@ export default function GenerateWeek({ companyId, drafts }: {
         {drafts.map((d) => <li key={d.id}><strong>{d.kind}</strong> · {d.scheduled_at.slice(0, 16).replace('T', ' ')} · {d.title}</li>)}
       </ul>
       {drafts.length > 0 && (
+        <button className="btn ghost" style={{ justifySelf: 'start' }}
+          onClick={() => post('/api/gestor/refazer-fotos', { companyId }, (j) => `Fotos refeitas em ${j.updated} rascunhos (${j.withPhoto} com foto).`)}>
+          Refazer fotos dos rascunhos
+        </button>
+      )}
+      {drafts.length > 0 && (
         <button className="btn ok" style={{ justifySelf: 'start' }}
           onClick={() => post('/api/gestor/release', { companyId, postIds: drafts.map((d) => d.id) }, (j) => `${j.released} posts enviados para o cliente aprovar.`)}>
           Liberar todos para o cliente
