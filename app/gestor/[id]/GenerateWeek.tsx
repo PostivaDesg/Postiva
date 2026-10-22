@@ -46,15 +46,15 @@ export default function GenerateWeek({ companyId, drafts }: {
     const r = await fetch('/api/gestor/canva-arts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ companyId, ...body }) }).catch(() => null);
     const j = r?.ok ? await readJSON(r) : { pending: [] };
     const pending: string[] = j.pending ?? [];
-    let ok = 0, fail = 0, lastErr = '';
+    let ok = 0, fail = 0, semModelo = 0, lastErr = '';
     for (let i = 0; i < pending.length; i++) {
       setStatus(`${prefix}Montando as artes no Canva: ${i + 1} de ${pending.length}…`);
       const b = await fetch('/api/gestor/canva-arts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ companyId, postId: pending[i] }) }).catch(() => null);
-      if (b?.ok) ok++; else { fail++; lastErr = b ? (await readJSON(b)).error ?? '' : 'sem conexão'; }
+      if (b?.ok) { const bj = await readJSON(b); if (bj.path) ok++; else semModelo++; } else { fail++; lastErr = b ? (await readJSON(b)).error ?? '' : 'sem conexão'; }
     }
     router.refresh();
     if (j.off) return '';
-    return pending.length ? ` ${ok} artes feitas no Canva${fail ? `, ${fail} com falha (${lastErr})` : ''}.` : ' Artes do Canva já estão em dia.';
+    return pending.length ? ` ${ok} artes feitas no Canva${semModelo ? `, ${semModelo} sem modelo do Canva para o formato (ficam com a arte do site)` : ''}${fail ? `, ${fail} com falha (${lastErr})` : ''}.` : ' Artes do Canva já estão em dia.';
   }
 
   return (
