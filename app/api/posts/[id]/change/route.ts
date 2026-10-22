@@ -1,5 +1,6 @@
 // Cliente pede ajuste. O Claude refaz o post e ele volta para aprovação.
 import { NextResponse } from 'next/server';
+import { buildReel } from '@/lib/reels';
 import { currentProfile, supabaseAdmin } from '@/lib/supabase';
 import { PLANS, type PlanId } from '@/lib/plans';
 import { revisePiece } from '@/lib/claude';
@@ -9,7 +10,7 @@ import { pickStockPhotos } from '@/lib/art/stock';
 import { recordFeedback } from '@/lib/learning';
 import { withFiveHashtags } from '@/lib/hashtags';
 
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -62,7 +63,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     art_version: (post.art_version ?? 1) + 1, // a imagem é gerada de novo com o texto novo
     art_photo: piece.art_photo ?? post.art_photo ?? null,
     ...photoPatch,
+    // reels com vídeo automático: novas cenas e o vídeo é montado de novo (vídeo enviado pelo cliente fica)
+    ...(post.kind === 'reels' && (post.video_auto || !post.video_path)
+      ? { video_path: null, video_auto: false, reel_scenes: Array.isArray(piece.reel_scenes) ? piece.reel_scenes.slice(0, 4) : post.reel_scenes }
+      : {}),
   }).eq('id', id);
+  if (post.kind === 'reels' && (post.video_auto || !post.video_path)) await buildReel(id).catch((e) => console.error('[reels]', e));
   await db.from('ai_usage').insert({ company_id: post.company_id, ...usage });
 
   return NextResponse.json({ ok: true });

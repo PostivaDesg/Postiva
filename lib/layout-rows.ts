@@ -98,6 +98,9 @@ export async function withLayouts<T extends GeneratedPiece>(
       stock_photo_url: plan[i].stock_photo_url,
       art_photo: p.art_photo?.slice(0, 80) ?? null,
       art_product: p.art_product?.slice(0, 120) ?? null,
+      reel_scenes: p.kind === 'reels' && Array.isArray(p.reel_scenes)
+        ? p.reel_scenes.slice(0, 4).filter((c) => c?.text).map((c) => ({ text: String(c.text).slice(0, 60), photo: String(c.photo ?? p.art_photo ?? '').slice(0, 80) }))
+        : null,
       art_headline: (p.art_headline ?? p.title ?? '').slice(0, 90),
       art_sub: p.art_sub?.slice(0, 160) ?? null,
       art_cta: p.art_cta?.slice(0, 40) ?? null,
@@ -113,6 +116,6 @@ export async function withLayouts<T extends GeneratedPiece>(
 
 /** Colunas da arte para gravar no post. */
 export const artColumns = (l: Awaited<ReturnType<typeof withLayouts>>[number]) => ({
-  layout: l.layout, date_label: l.date_label, credit: l.credit, asset_id: l.asset_id, stock_photo_url: l.stock_photo_url, art_photo: l.art_photo, art_product: l.art_product,
+  layout: l.layout, date_label: l.date_label, credit: l.credit, asset_id: l.asset_id, stock_photo_url: l.stock_photo_url, art_photo: l.art_photo, art_product: l.art_product, reel_scenes: l.reel_scenes,
   art_headline: l.art_headline, art_sub: l.art_sub, art_cta: l.art_cta, art_items: l.art_items, art_brief: l.art_brief,
 });

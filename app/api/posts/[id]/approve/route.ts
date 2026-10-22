@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server';
 import { currentProfile, supabaseAdmin } from '@/lib/supabase';
 import { approvePost } from '@/lib/approve';
 
+export const maxDuration = 300; // reels: monta o vídeo na aprovação
+
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const me = await currentProfile();

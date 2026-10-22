@@ -33,7 +33,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const folder = b.path.split('/')[0], name = b.path.split('/')[1];
   const { data: files } = await db.storage.from('videos').list(folder, { search: name });
   if (!files?.some((f) => f.name === name)) return NextResponse.json({ error: 'O vídeo não chegou. Tente de novo.' }, { status: 400 });
-  await db.from('posts').update({ video_path: b.path }).eq('id', id);
+  await db.from('posts').update({ video_path: b.path, video_auto: false }).eq('id', id);
+  // já aprovado (ou agendado com o vídeo automático): agenda com o vídeo do cliente
   const status = post.status === 'aprovado' ? await schedulePostNow(id) : post.status;
   return NextResponse.json({ ok: true, status });
 }

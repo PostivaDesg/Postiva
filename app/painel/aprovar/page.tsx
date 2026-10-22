@@ -1,4 +1,4 @@
-// Posts esperando aprovação + reels esperando o vídeo.
+// Posts esperando aprovação. Reels: a Postiva monta o vídeo; enviar um vídeo próprio é opcional.
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { currentProfile, supabaseAdmin } from '@/lib/supabase';
@@ -17,9 +17,16 @@ export default async function Aprovar() {
   const db = supabaseAdmin();
   const [{ data: pending }, { data: reels }] = await Promise.all([
     db.from('posts').select('*').eq('company_id', me.company_id!).eq('status', 'aguardando').order('scheduled_at'),
-    db.from('posts').select('id, title, status').eq('company_id', me.company_id!).eq('kind', 'reels').is('video_path', null).in('status', ['aguardando', 'aprovado']),
+    db.from('posts').select('id, title, status, video_path, video_auto').eq('company_id', me.company_id!).eq('kind', 'reels').in('status', ['aguardando', 'aprovado']),
   ]);
   const list = pending ?? [];
+  // vídeo pronto (automático ou do cliente) aparece no cartão para assistir antes de aprovar
+  const videos = new Map<string, string>();
+  await Promise.all(list.filter((p) => p.kind === 'reels' && p.video_path).map(async (p) => {
+    const { data } = await db.storage.from('videos').createSignedUrl(p.video_path, 3600);
+    if (data?.signedUrl) videos.set(p.id, data.signedUrl);
+  }));
+  const ownVideo = (reels ?? []).filter((r) => !r.video_path || r.video_auto);
   return (
     <div className="pilha">
       <header className="cabecalho">
@@ -30,16 +37,18 @@ export default async function Aprovar() {
         {list.length > 1 && <div className="acoes"><ApproveAll count={list.length} /></div>}
       </header>
 
-      {!!reels?.length && (
-        <section className="painel" aria-label="Reels esperando vídeo">
-          <div className="painel-titulo"><div><h2>Reels esperando o vídeo</h2><p>Grave seguindo o roteiro da legenda e envie aqui. Depois de aprovado, ele é agendado sozinho.</p></div></div>
-          <div className="grid">{reels.map((r) => <VideoUpload key={r.id} postId={r.id} title={r.title} />)}</div>
-        </section>
+      {!!ownVideo.length && (
+        <details className="painel" aria-label="Usar um vídeo seu no reels">
+          <summary style={{ cursor: 'pointer', fontWeight: 700 }}>Quer um reels com um vídeo seu? (opcional)</summary>
+          <p className="muted" style={{ margin: '10px 0 14px' }}>A Postiva já monta os reels com fotos, frases e o seu logo. Se preferir usar um vídeo gravado por você, envie aqui e ele substitui o automático.</p>
+          <div className="grid">{ownVideo.map((r) => <VideoUpload key={r.id} postId={r.id} title={r.title} />)}</div>
+        </details>
       )}
 
       {list.length ? list.map((p) => (
         <PostCard key={p.id} id={p.id} kind={KIND[p.kind] ?? p.kind} when={quando(p.scheduled_at)}
-          title={p.title} caption={p.caption} reason={p.reason} artUrl={p.art_url ?? artUrl(p.id, p.art_version, false)} />
+          title={p.title} caption={p.caption} reason={p.reason} artUrl={p.art_url ?? artUrl(p.id, p.art_version, false)}
+          videoUrl={videos.get(p.id) ?? null} isReel={p.kind === 'reels'} />
       )) : (
         <div className="vazio">
           <h3>Tudo aprovado</h3>

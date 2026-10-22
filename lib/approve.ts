@@ -1,12 +1,14 @@
 // Aprovação e agendamento.
 //  - approvePost: botão "Aprovar", "Aprovar todos" e aprovação automática opcional.
 //  - schedulePostNow: agenda no Metricool um post já aprovado (ex.: reels depois que o vídeo chegou).
-// Stories e posts têm arte gerada pelo site e vão direto. Reels precisam do vídeo: a arte vira a capa.
+// Stories e posts têm arte gerada pelo site e vão direto. Reels: o site monta o vídeo (lib/reels.tsx) e a arte vira a capa;
+// se o cliente enviou um vídeo próprio, usa o dele.
 import { supabaseAdmin } from './supabase';
 import { schedulePost } from './metricool';
 import { artUrl } from './art/url';
-import { notifyClient, notifyGestor } from './notify';
+import { notifyGestor } from './notify';
 import { recordFeedback } from './learning';
+import { buildReel } from './reels';
 
 export async function schedulePostNow(postId: string) {
   const db = supabaseAdmin();
@@ -43,8 +45,12 @@ export async function approvePost(postId: string, manual = true) {
   await db.from('posts').update({ status: 'aprovado' }).eq('id', postId);
   if (manual) await recordFeedback(post.company_id, 'aprovado', { post_kind: post.kind, title: post.title, art_photo: post.art_photo });
   if (post.kind === 'reels' && !post.video_path) {
-    await notifyClient(post.company_id, 'aprovar', `Reels "${post.title}" aprovado. Envie o vídeo no painel para ele ser agendado.`, `video-${postId}`);
-    return { ok: true as const, status: 'aguardando vídeo' };
+    // a Postiva monta o vídeo sozinha (fotos + frases + logo); o cliente só envia vídeo se quiser um reels com o dele
+    try { await buildReel(postId); } catch (e) {
+      console.error('[reels]', e);
+      await notifyGestor(post.company_id, 'agendamento', `Não consegui montar o vídeo do reels "${post.title}". Abra a empresa e toque em "Montar vídeo".`, `reel-${postId}`);
+      return { ok: true as const, status: 'aguardando vídeo' };
+    }
   }
   return { ok: true as const, status: await schedulePostNow(postId) };
 }

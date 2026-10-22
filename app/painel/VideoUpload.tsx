@@ -28,7 +28,7 @@ export default function VideoUpload({ postId, title }: { postId: string; title: 
     <div style={{ display: 'grid', gap: 6 }}>
       <label htmlFor={`v-${postId}`}>Vídeo do reels: {title}</label>
       <input id={`v-${postId}`} type="file" accept="video/mp4,video/quicktime" onChange={(e) => e.target.files?.[0] && send(e.target.files[0])} />
-      <span className="muted" style={{ fontSize: 13 }}>MP4 ou MOV, vertical (9:16), até 60 segundos. A arte gerada vira a capa e o roteiro está na legenda.</span>
+      <span className="muted" style={{ fontSize: 13 }}>MP4 ou MOV, vertical (9:16), até 60 segundos. Ele substitui o vídeo que a Postiva montou; a arte continua como capa.</span>
       {status && <span role="status" style={{ fontSize: 14 }}>{status}</span>}
     </div>
   );

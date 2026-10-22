@@ -27,6 +27,20 @@ export default function GenerateWeek({ companyId, drafts }: {
     router.refresh();
   }
 
+  // monta os vídeos dos reels um por um (cada um leva uns 30 a 60 segundos)
+  async function montarReels(body: object, prefix = '') {
+    const r = await fetch('/api/gestor/reels', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ companyId, ...body }) }).catch(() => null);
+    const pending: string[] = r?.ok ? (await readJSON(r)).pending ?? [] : [];
+    let ok = 0, fail = 0;
+    for (let i = 0; i < pending.length; i++) {
+      setStatus(`${prefix}Montando o vídeo do reels ${i + 1} de ${pending.length}…`);
+      const b = await fetch('/api/gestor/reels', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ companyId, postId: pending[i] }) }).catch(() => null);
+      if (b?.ok) ok++; else fail++;
+    }
+    router.refresh();
+    return pending.length ? ` ${ok} ${ok === 1 ? 'vídeo de reels montado' : 'vídeos de reels montados'}${fail ? `, ${fail} com falha (tente "Montar vídeos dos reels")` : ''}.` : '';
+  }
+
   return (
     <section className="painel pilha" style={{ gap: 14 }}>
       <div className="painel-titulo" style={{ marginBottom: 0 }}>
@@ -45,7 +59,12 @@ export default function GenerateWeek({ companyId, drafts }: {
           const j = await readJSON(r);
           if (!r.ok) { setStatus(j.error); return; }
           // em seguida, o Claude olha e escolhe a foto de cada peça nova (outra chamada: cabe no tempo da Vercel)
-          await post('/api/gestor/refazer-fotos', { companyId, postIds: j.ids }, (f) => `${j.created} peças criadas como rascunho, ${f.withPhoto} com foto escolhida.`);
+          setStatus(`${j.created} peças escritas. Escolhendo as fotos…`);
+          const f = await fetch('/api/gestor/refazer-fotos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ companyId, postIds: j.ids }) }).catch(() => null);
+          const fj = f ? await readJSON(f) : {};
+          const base = `${j.created} peças criadas como rascunho, ${fj.withPhoto ?? 0} com foto escolhida.`;
+          const reels = await montarReels({ postIds: j.ids }, base + ' ');
+          setStatus(base + reels);
         }}>
         Gerar com o Claude
       </button>
@@ -56,6 +75,12 @@ export default function GenerateWeek({ companyId, drafts }: {
         <button className="btn ghost" style={{ justifySelf: 'start' }}
           onClick={() => post('/api/gestor/refazer-fotos', { companyId }, (j) => `Fotos refeitas em ${j.updated} rascunhos (${j.withPhoto} com foto).`)}>
           Refazer fotos dos rascunhos
+        </button>
+      )}
+      {drafts.some((d) => d.kind === 'reels') && (
+        <button className="btn ghost" style={{ justifySelf: 'start' }}
+          onClick={async () => { setStatus('Procurando reels…'); setStatus((await montarReels({ refazer: true })) || 'Nenhum reels para montar.'); }}>
+          Montar vídeos dos reels
         </button>
       )}
       {drafts.length > 0 && (

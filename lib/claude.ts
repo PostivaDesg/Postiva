@@ -39,6 +39,7 @@ export interface GeneratedPiece {
   art_items?: string[] | null; // 3 itens curtos quando a arte é uma lista
   art_photo?: string | null;   // busca da foto de banco gratuito, em inglês (ex.: "woman headache office"), ou "loja"/"equipe"
   art_product?: string | null; // nome exato de uma foto de produto da empresa (lista no contexto da semana)
+  reel_scenes?: { text: string; photo: string }[] | null; // reels: 3 ou 4 cenas do vídeo que o site monta
 }
 
 /** Instruções fixas da Postiva Design, iguais para todas as empresas. */
@@ -81,6 +82,10 @@ Texto DENTRO da arte (a arte é gerada automaticamente com o modelo da marca):
   da lista. Senão, escreva o produto como ele é vendido (tipo + apresentação, ex.: "vitamina C efervescente 1g", "protetor solar facial FPS 50"),
   para a foto real da embalagem ser buscada. Nunca medicamento de tarja vermelha ou preta. Nunca preço. Peça sem produto: null.
   A foto, o título e a legenda falam da MESMA coisa.
+Reels: a Postiva monta o vídeo sozinha (capa = a arte, depois as cenas, no fim o logo e o WhatsApp). Todo reels traz "reel_scenes"
+  com 3 ou 4 cenas em ordem, cada uma {"text": frase da tela com até 7 palavras, "photo": busca da foto em inglês ligada à frase}.
+  As cenas contam uma história curta (problema → solução → produto/serviço → convite) e não repetem o art_headline. Sem pedir para o cliente gravar.
+  Nas outras peças, reel_scenes é null.
 Hashtags: a legenda de TODO post e reels termina com uma linha com EXATAMENTE 5 hashtags, pertinentes a ESTA empresa e a ESTA peça:
   2 da marca/cidade (escolha das hashtags fixas da marca, se houver; senão o nome da empresa e a cidade sem acento) + 3 do assunto da peça,
   específicas e usadas de verdade no Brasil (ex.: #ProtetorSolar #PeleSaudavel #VeraoCaboFrio). Sem acento, sem espaço, sem hashtag genérica
@@ -131,7 +136,7 @@ Melhores horários da conta: ${opts.bestTimes ?? 'stories 09:00, 13:00 e 18:00; 
 ${opts.extraContext ? `Contexto da semana: ${opts.extraContext}` : ''}
 
 Responda SÓ com um array JSON, sem texto antes ou depois, neste formato:
-[{"kind":"story|post|reels","day":"AAAA-MM-DD","time":"HH:MM","title":"...","caption":"...","art_brief":"...","reason":"...","art_headline":"...","art_sub":null,"art_cta":null,"art_items":null,"art_photo":"...","art_product":null,"date_label":null}]
+[{"kind":"story|post|reels","day":"AAAA-MM-DD","time":"HH:MM","title":"...","caption":"...","art_brief":"...","reason":"...","art_headline":"...","art_sub":null,"art_cta":null,"art_items":null,"art_photo":"...","art_product":null,"date_label":null,"reel_scenes":null}]
 (Em peça de data comemorativa ou feriado, "date_label" é o nome da data, ex.: "Dia das Crianças".)
 Seja objetivo no art_brief (1 ou 2 frases): a arte é gerada automaticamente.`;
   return {
@@ -215,7 +220,7 @@ export async function generateQuick(brand: BrandProfile, req: { topic: string; k
       content: `O cliente pediu 1 ${req.kind} para ${req.day} sobre: "${req.topic}".
 ${req.extra ?? ''}
 Se o pedido citar preço, promoção ou dado que não esteja no briefing, use exatamente o que o cliente escreveu; se faltar algo essencial, deixe entre [colchetes].
-Responda SÓ com um objeto JSON: {"kind":"${req.kind}","day":"${req.day}","time":"HH:MM","title":"...","caption":"...","art_brief":"...","reason":"...","art_headline":"...","art_sub":null,"art_cta":null,"art_items":null,"art_photo":"...","art_product":null}`,
+Responda SÓ com um objeto JSON: {"kind":"${req.kind}","day":"${req.day}","time":"HH:MM","title":"...","caption":"...","art_brief":"...","reason":"...","art_headline":"...","art_sub":null,"art_cta":null,"art_items":null,"art_photo":"...","art_product":null,"reel_scenes":null}`,
     }],
   });
   const text = res.content.filter((c) => c.type === 'text').map((c) => (c as { text: string }).text).join('');

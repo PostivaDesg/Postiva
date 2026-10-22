@@ -29,7 +29,8 @@
     "google-auth-library": "11.3.1",
     "next": "15.5.28",
     "react": "19.3.1",
-    "react-dom": "19.3.1"
+    "react-dom": "19.3.1",
+    "ffmpeg-static": "5.2.0"
   },
   "devDependencies": {
     "@types/node": "22.20.5",
