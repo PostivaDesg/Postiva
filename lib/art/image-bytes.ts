@@ -25,3 +25,25 @@ export async function remoteToDataUrl(url: string | null | undefined) {
     return r.ok ? toArtDataUrl(await r.arrayBuffer()) : null;
   } catch { return null; }
 }
+
+/** Largura e altura de um PNG/JPG pelos bytes (sem bibliotecas). */
+export function imageSize(bytes: Uint8Array): { w: number; h: number } | null {
+  const mime = imageMime(bytes);
+  if (mime === 'image/png' && bytes.length > 24) {
+    const v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    return { w: v.getUint32(16), h: v.getUint32(20) };
+  }
+  if (mime === 'image/jpeg') {
+    let i = 2;
+    while (i + 9 < bytes.length) {
+      if (bytes[i] !== 0xff) { i++; continue; }
+      const m = bytes[i + 1];
+      const len = (bytes[i + 2] << 8) | bytes[i + 3];
+      if (m >= 0xc0 && m <= 0xcf && m !== 0xc4 && m !== 0xc8 && m !== 0xcc) {
+        return { h: (bytes[i + 5] << 8) | bytes[i + 6], w: (bytes[i + 7] << 8) | bytes[i + 8] };
+      }
+      i += 2 + len;
+    }
+  }
+  return null;
+}

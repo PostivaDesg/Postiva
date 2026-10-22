@@ -2,7 +2,8 @@
 import { supabaseAdmin } from '../supabase';
 import { normalizeSpec, toTheme, variantTheme, textOn, type Theme } from './theme';
 import { renderArt } from './render';
-import { assetById, assetDataUrl, logoDataUrl } from './assets';
+import { anyBrandPhoto, assetById, assetDataUrl, logoDataUrl } from './assets';
+import { NEEDS_PHOTO } from './layouts';
 import { directionById } from '../styles';
 import { BRAND } from '../brand-config';
 import { stockDataUrl } from './stock';
@@ -40,16 +41,26 @@ export async function renderPostArt(postId: string) {
     promo = data;
   }
   // foto da promoção vem de site de terceiros: baixa e confere o formato (WEBP quebraria a arte)
-  const photo = (await remoteToDataUrl(promo?.photo_url)) ?? (await assetDataUrl(await assetById(p.asset_id))) ?? (await stockDataUrl(p.stock_photo_url));
+  const [main, bg] = await Promise.all([
+    (async () => (await remoteToDataUrl(promo?.photo_url)) ?? (await assetDataUrl(await assetById(p.asset_id))) ?? (await stockDataUrl(p.stock_photo_url)))(),
+    stockDataUrl(p.bg_photo_url),
+  ]);
+  // se a foto principal falhar, usa a foto de cena; senão uma foto real da loja/equipe (nunca arte de cor lisa)
+  const photo = main ?? bg ?? (await anyBrandPhoto(company.id, p.id));
+  const bgPhoto = main ? bg : null;
+  // regra da Postiva: arte sempre com produto ou pessoa. Layout só de texto (ou embalagem sem embalagem) → layout de foto
+  let layout = p.layout ?? 'foto-faixa';
+  if (photo && (!NEEDS_PHOTO.includes(layout) || (layout === 'produto-flutuante' && !main))) layout = p.date_label ? 'data-festiva' : 'foto-faixa';
 
   return renderArt({
-    layout: p.layout ?? 'tipografico',
+    layout,
     format: p.kind === 'post' ? 'post' : 'story',
     // cada post com sua variação; data com cor de campanha usa a cor da campanha
     theme: p.date_label ? dateTheme(await companyTheme(company), p.date_label) : variantTheme(await companyTheme(company), p.id),
     brandName: company.name,
     logo: await logoDataUrl(company.id),
     photo,
+    bgPhoto,
     headline: p.art_headline || p.title,
     sub: p.art_sub,
     cta: p.art_cta,

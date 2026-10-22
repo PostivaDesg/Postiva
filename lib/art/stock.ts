@@ -4,7 +4,7 @@
 // da empresa (bucket "marcas", pasta banco/) e a arte lê dali. As buscas ficam em cache por 24h.
 // Sem nenhuma das chaves, nada muda: o site usa só as fotos da empresa e os layouts de texto.
 import { supabaseAdmin } from '../supabase';
-import { imageMime, toArtDataUrl, MAX_ART_IMAGE } from './image-bytes';
+import { imageMime, toArtDataUrl, MAX_ART_IMAGE, imageSize } from './image-bytes';
 
 export type Hit = { key: string; url: string; tags?: string; thumb?: string }; // key: "pixabay-123" / "pexels-456" (para não repetir)
 
@@ -75,7 +75,8 @@ export async function searchStock(query: string, perPage = 15): Promise<Hit[]> {
 }
 
 /** Copia a foto para o armazenamento da empresa e devolve o caminho ("banco/..."). */
-export async function saveCopy(companyId: string, hit: Hit) {
+/** minSide: menor lado mínimo em pixels (foto de produto pequena fica borrada na arte). */
+export async function saveCopy(companyId: string, hit: Hit, minSide = 0) {
   try {
     const r = await fetch(hit.url, { signal: AbortSignal.timeout(15000) });
     if (!r.ok) return null;
@@ -83,6 +84,7 @@ export async function saveCopy(companyId: string, hit: Hit) {
     // só JPG e PNG (pelos bytes, não pelo cabeçalho) e até 6 MB: o gerador de artes não lê WEBP/AVIF
     const mime = bytes.length <= MAX_ART_IMAGE ? imageMime(bytes) : null;
     if (!mime) return null;
+    if (minSide) { const d = imageSize(bytes); if (!d || Math.min(d.w, d.h) < minSide) return null; }
     const path = `${companyId}/banco/${hit.key}.${mime === 'image/png' ? 'png' : 'jpg'}`;
     const { error } = await supabaseAdmin().storage.from('marcas').upload(path, bytes, { contentType: mime, upsert: true });
     return error ? null : path;
@@ -183,7 +185,7 @@ export async function pickProductPhotos(companyId: string, names: (string | null
     const q = n?.trim();
     if (!q) return;
     for (const hit of (await productImages(q, site)).filter((h) => allowed(h, banned)).slice(0, 10)) {
-      const path = await saveCopy(companyId, hit);
+      const path = await saveCopy(companyId, hit, 500);
       if (path) { out[i] = path; break; }
     }
   });

@@ -12,7 +12,7 @@ export type PickIn = {
   id: string; kind: string; layout: string; date_label?: string | null;
   headline: string; caption?: string | null; art_photo?: string | null; art_product?: string | null;
 };
-export type PickOut = { layout: string; asset_id: string | null; stock_photo_url: string | null };
+export type PickOut = { layout: string; asset_id: string | null; stock_photo_url: string | null; bg_photo_url?: string | null };
 
 const RESERVE: Record<string, { loja: string; equipe: string }> = {
   farmacia: { loja: 'pharmacist pharmacy counter', equipe: 'pharmacist smiling customer' },
@@ -61,7 +61,7 @@ export async function pickWithVision(company: any, posts: PickIn[], onPick?: (i:
   const specPhoto = (company.template_spec?.layouts ?? []).filter((l: string) => NEEDS_PHOTO.includes(l) && !['produto-flutuante', 'faixa-preco'].includes(l));
   const photoPool = specPhoto.length ? specPhoto : ['foto-faixa', 'foto-cheia', 'diagonal', 'divisao-vertical'];
   let k = 0;
-  const out: PickOut[] = posts.map((p) => ({ layout: p.layout, asset_id: null, stock_photo_url: null }));
+  const out: PickOut[] = posts.map((p) => ({ layout: p.layout, asset_id: null, stock_photo_url: null, bg_photo_url: null }));
 
   const queryOf = (p: PickIn) => {
     const ap = String(p.art_photo ?? '').trim(); const low = ap.toLowerCase();
@@ -81,6 +81,11 @@ export async function pickWithVision(company: any, posts: PickIn[], onPick?: (i:
     if (pick > 0) {
       const hit = cands[pick - 1];
       seen.add(hit.key);
+      // embalagem: precisa ter pelo menos 500 px (miniatura fica borrada); foto de cena pode usar a miniatura se a original bloquear
+      if (product) {
+        for (const h of [hit, ...cands.filter((c) => c !== hit)]) { const ok = await saveCopy(company.id, h, 500); if (ok) return ok; }
+        return null;
+      }
       return (await saveCopy(company.id, hit)) ?? (hit.thumb && hit.thumb !== hit.url ? await saveCopy(company.id, { ...hit, key: hit.key + 't', url: hit.thumb }) : null);
     }
     if (retry && !product && stockEnabled()) {
@@ -94,6 +99,13 @@ export async function pickWithVision(company: any, posts: PickIn[], onPick?: (i:
   };
 
   const save = async (i: number, o: PickOut) => { out[i] = o; if (onPick) await onPick(i, o).catch(() => {}); };
+
+  // foto de cena (pessoa usando, situação) escolhida pelo Claude
+  const scene = async (i: number) => {
+    if (!stockEnabled()) return null;
+    const q = queryOf(posts[i]);
+    return choose(i, fresh(await searchStock(q, 30), q), false);
+  };
 
   const stockPick = async (i: number) => {
     const p = posts[i];
@@ -112,10 +124,13 @@ export async function pickWithVision(company: any, posts: PickIn[], onPick?: (i:
   await Promise.all([
     runLimited(productIdx, 2, async (i) => {
       const p = posts[i];
-      const cands = fresh(await productImages(p.art_product!, company.site_url), '', false); // site da empresa primeiro
-      const path = await choose(i, cands, true);
-      if (path) await save(i, { layout: 'produto-flutuante', asset_id: null, stock_photo_url: path });
-      else await stockPick(i); // sem embalagem boa: foto de banco
+      // embalagem (site da empresa primeiro) + foto de cena atrás: nunca fundo liso
+      const cands = fresh(await productImages(p.art_product!, company.site_url), '', false);
+      const [path, bg] = await Promise.all([choose(i, cands, true), scene(i)]);
+      if (path && bg) await save(i, { layout: 'produto-flutuante', asset_id: null, stock_photo_url: path, bg_photo_url: bg });
+      else if (bg) await save(i, { layout: photoPool[k++ % photoPool.length], asset_id: null, stock_photo_url: bg, bg_photo_url: null });
+      else if (path) await save(i, { layout: 'produto-flutuante', asset_id: null, stock_photo_url: path, bg_photo_url: null });
+      else await stockPick(i);
     }),
     runLimited(restIdx, 5, stockPick),
   ]);

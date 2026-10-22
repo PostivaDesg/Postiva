@@ -30,6 +30,15 @@ export async function assetById(id: string | null | undefined) {
   return data as Asset | null;
 }
 
+/** Última rede de segurança da arte: uma foto real da loja ou da equipe (nunca arte de cor lisa). */
+export async function anyBrandPhoto(companyId: string, seed: string) {
+  const { data } = await supabaseAdmin().from('company_assets').select('id, kind, storage_path, drive_file_id, name')
+    .eq('company_id', companyId).in('kind', ['loja', 'equipe']).limit(20);
+  if (!data?.length) return null;
+  const n = [...seed].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
+  return assetDataUrl(data[n % data.length] as Asset);
+}
+
 // Que tipo de foto combina com cada layout
 const PREFER: Record<string, string[]> = {
   'data-foto-equipe': ['equipe', 'loja'], 'polaroid': ['equipe', 'loja', 'produto'], 'citacao': [],

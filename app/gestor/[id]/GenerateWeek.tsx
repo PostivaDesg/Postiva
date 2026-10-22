@@ -71,10 +71,10 @@ export default function GenerateWeek({ companyId, drafts }: {
       {status && <p role="status" style={{ margin: 0 }}>{status}</p>}
 
       {drafts.length > 0 && <p className="muted" style={{ margin: 0 }}>{drafts.length} {drafts.length === 1 ? 'rascunho' : 'rascunhos'} desta empresa esperando revisão.</p>}
-      {drafts.length > 0 && (
+      {(
         <button className="btn ghost" style={{ justifySelf: 'start' }}
-          onClick={() => post('/api/gestor/refazer-fotos', { companyId }, (j) => `Fotos refeitas em ${j.updated} rascunhos (${j.withPhoto} com foto).`)}>
-          Refazer fotos dos rascunhos
+          onClick={() => post('/api/gestor/refazer-fotos', { companyId }, (j) => `Fotos refeitas em ${j.updated} peças (${j.withPhoto} com foto).`)}>
+          Refazer fotos (rascunhos e não aprovados)
         </button>
       )}
       {drafts.some((d) => d.kind === 'reels') && (

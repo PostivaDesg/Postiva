@@ -62,7 +62,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       headline: piece.art_headline ?? post.art_headline ?? piece.title, caption: piece.caption,
       art_photo: piece.art_photo ?? post.art_photo, art_product: piece.art_product ?? post.art_product,
     }]).catch(() => [null]);
-    if (pick?.asset_id || pick?.stock_photo_url) photoPatch = { layout: pick.layout, asset_id: pick.asset_id, stock_photo_url: pick.stock_photo_url };
+    if (pick?.asset_id || pick?.stock_photo_url) photoPatch = { layout: pick.layout, asset_id: pick.asset_id, stock_photo_url: pick.stock_photo_url, bg_photo_url: pick.bg_photo_url ?? null };
     else {
       const own = (await photosBySubject(post.company_id, [{ art_photo: piece.art_photo, art_product: piece.art_product }]))[0];
       const stock = own ? null : (await pickStockPhotos(post.company_id, [piece.art_photo ?? post.art_photo]))[0];

@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   const { data: company } = await db.from('companies').select('*').eq('id', companyId).single();
   if (!company) return NextResponse.json({ error: 'Empresa não encontrada.' }, { status: 404 });
   let q = db.from('posts').select('id, kind, layout, art_photo, art_product, date_label, promo_item_ids, art_version, art_headline, caption')
-    .eq('company_id', companyId).eq('status', 'rascunho');
+    .eq('company_id', companyId).in('status', ['rascunho', 'aguardando']); // ainda não aprovados
   if (postIds?.length) q = q.in('id', postIds);
   const { data: posts } = await q.order('scheduled_at').limit(120);
   if (!posts?.length) return NextResponse.json({ updated: 0 });
@@ -39,7 +39,7 @@ export async function POST(req: Request) {
     // grava na hora: se a Vercel cortar por tempo, o que já foi escolhido fica salvo
     if (!x.asset_id && !x.stock_photo_url) return;
     withPhoto++;
-    const { error } = await db.from('posts').update({ layout: x.layout, asset_id: x.asset_id, stock_photo_url: x.stock_photo_url, art_version: (posts[i].art_version ?? 1) + 1 }).eq('id', posts[i].id);
+    const { error } = await db.from('posts').update({ layout: x.layout, asset_id: x.asset_id, stock_photo_url: x.stock_photo_url, bg_photo_url: x.bg_photo_url ?? null, art_version: (posts[i].art_version ?? 1) + 1 }).eq('id', posts[i].id);
     if (!error) updated++;
   });
   return NextResponse.json({ updated, withPhoto });

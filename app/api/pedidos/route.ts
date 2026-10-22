@@ -55,7 +55,7 @@ export async function POST(req: Request) {
     headline: post.art_headline ?? post.title, caption: post.caption, art_photo: post.art_photo, art_product: post.art_product,
   }]).catch(() => [null]);
   if (pick?.asset_id || pick?.stock_photo_url) {
-    await db.from('posts').update({ layout: pick.layout, asset_id: pick.asset_id, stock_photo_url: pick.stock_photo_url, art_version: (post.art_version ?? 1) + 1 }).eq('id', post.id);
+    await db.from('posts').update({ layout: pick.layout, asset_id: pick.asset_id, stock_photo_url: pick.stock_photo_url, bg_photo_url: pick.bg_photo_url ?? null, art_version: (post.art_version ?? 1) + 1 }).eq('id', post.id);
   }
   if (b.kind === 'reels') await buildReel(post.id).catch((e) => console.error('[reels]', e));
 

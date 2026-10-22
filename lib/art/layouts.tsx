@@ -12,6 +12,7 @@ export interface ArtInput {
   brandName: string;
   logo?: string | null;          // data URL
   photo?: string | null;         // data URL ou URL pública
+  bgPhoto?: string | null;       // foto de cena atrás da embalagem (produto-flutuante)
   headline: string;
   sub?: string | null;
   cta?: string | null;
@@ -224,6 +225,25 @@ const LAYOUTS: Record<string, L> = {
 
   // Produto (embalagem): foto grande num cartão branco sobre a cor da marca, texto embaixo
   'produto-flutuante': (a, W, H) => { const t = a.theme; const story = a.format === 'story';
+    // com foto de cena: a cena ocupa a arte inteira e a embalagem aparece num cartão branco por cima
+    if (a.bgPhoto) { const card = story ? 470 : 420; return (
+    <Frame t={{ ...t, frame: 'none' }} W={W} H={H} bg={t.palette.primary}>
+      <img src={a.bgPhoto} style={{ position: 'absolute', left: 0, top: 0, width: W, height: H, objectFit: 'cover' }} />
+      <div style={{ position: 'absolute', left: 0, top: 0, width: W, height: H, display: 'flex',
+        backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,0) 30%, ${t.palette.primary}66 55%, ${t.palette.primary}F2 100%)` }} />
+      <div style={{ position: 'absolute', right: 56, top: story ? 230 : 150, width: card, height: card, background: '#FFFFFF', borderRadius: 36,
+        boxShadow: '0 24px 50px rgba(0,0,0,0.30)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 30 }}>
+        <img src={a.photo!} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+      </div>
+      <div style={{ position: 'absolute', left: 64, right: 64, bottom: story ? 250 : 110, ...col(18, { alignItems: 'flex-start' }) }}>
+        <Headline t={{ ...t, textBox: 'none', headlineAlign: 'left' }} text={a.headline} size={fit(a.headline, 76, 44)} color="#FFFFFF" align="left" />
+        {a.priceTo ? <PriceTag t={{ ...t, headlineAlign: 'left' }} from={a.priceFrom} to={a.priceTo} big={92} />
+          : <Body t={t} text={a.sub} size={38} color="#FFFFFF" align="left" />}
+        <Small t={t} text={a.validity} color="#FFFFFF" />
+        {!a.priceTo && a.cta && <Cta t={{ ...t, headlineAlign: 'left' }} text={a.cta} />}
+      </div>
+      <Logo t={t} logo={a.logo} name={a.brandName} light pos="top-left" /><Credit t={t} text={a.credit} light />
+    </Frame>); }
     const cardH = H * (story ? 0.5 : 0.55); return (
     <Frame t={{ ...t, frame: 'none' }} W={W} H={H} bg={t.palette.primary}>
       <div style={{ position: 'absolute', left: -W * 0.25, top: -W * 0.35, width: W * 1.1, height: W * 1.1, borderRadius: W, background: t.palette.secondary, opacity: 0.18, display: 'flex' }} />
