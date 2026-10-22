@@ -109,6 +109,10 @@ export default function GenerateWeek({ companyId, drafts }: {
         </button>
       )}
       <button className="btn ghost" style={{ justifySelf: 'start' }}
+        onClick={() => emSegundoPlano({ importar: true, fotos: true }, 'Importando as fotos reais do Instagram da empresa e refazendo as artes. ')}>
+        Usar fotos do Instagram da empresa
+      </button>
+      <button className="btn ghost" style={{ justifySelf: 'start' }}
         onClick={() => emSegundoPlano({ fotos: false })}>
         Gerar artes no Canva
       </button>

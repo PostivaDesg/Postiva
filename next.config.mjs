@@ -15,6 +15,7 @@ const nextConfig = {
     '/api/posts/approve-all': reel,
     '/api/cron/alertas': reel,
     '/api/jobs/artes': reel,
+    '/api/gestor/artes': ['./data/instagram/*.json'],
   },
 };
 export default nextConfig;

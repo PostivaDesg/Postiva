@@ -3,11 +3,14 @@
 import { NextResponse } from 'next/server';
 import { currentProfile, supabaseAdmin } from '@/lib/supabase';
 import { kickArtes } from '@/lib/jobs';
+import { queueInstagramImports } from '@/lib/instagram-import';
 
 export async function POST(req: Request) {
   const me = await currentProfile();
   if (me?.role !== 'gestor') return NextResponse.json({ error: 'Só o gestor.' }, { status: 403 });
-  const { companyId, postIds, fotos } = await req.json() as { companyId: string; postIds?: string[]; fotos?: boolean };
+  const { companyId, postIds, fotos, importar } = await req.json() as { companyId: string; postIds?: string[]; fotos?: boolean; importar?: boolean };
+  let novas = 0;
+  if (importar) novas = await queueInstagramImports(companyId);
   let ids: string[] = [];
   if (fotos) {
     let q = supabaseAdmin().from('posts').select('id').eq('company_id', companyId).in('status', ['rascunho', 'aguardando']);
@@ -15,8 +18,8 @@ export async function POST(req: Request) {
     const { data } = await q.order('scheduled_at').limit(150);
     ids = (data ?? []).map((p) => p.id);
   }
-  await kickArtes({ companyId, fotos: ids });
-  return NextResponse.json({ ok: true, fotos: ids.length });
+  await kickArtes({ companyId, fotos: ids, importar: !!importar });
+  return NextResponse.json({ ok: true, fotos: ids.length, novas });
 }
 
 export async function GET(req: Request) {

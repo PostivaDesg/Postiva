@@ -14,10 +14,14 @@ export async function refazerFotos(companyId: string, postIds: string[]) {
   if (!posts?.length) return { updated: 0, withPhoto: 0 };
 
   // o Claude revê o tema de foto pelo título e pela legenda (mantém "loja"/"equipe" quando há foto própria)
-  const qs = await photoQueries(posts.map((p) => ({ headline: p.art_headline ?? '', caption: p.caption, segment: company.segment })), await photoLessons(companyId)).catch(() => []);
+  const { data: own } = await db.from('company_assets').select('kind').eq('company_id', companyId).in('kind', ['loja', 'equipe']);
+  const ownHint = own?.length
+    ? 'A empresa tem fotos reais próprias da loja e da equipe: em post de horário, loja aberta, entrega, atendimento ou bastidores, responda "q": "loja" (ou "equipe" se fala das pessoas).'
+    : '';
+  const qs = await photoQueries(posts.map((p) => ({ headline: p.art_headline ?? '', caption: p.caption, segment: company.segment })), [ownHint, await photoLessons(companyId)].filter(Boolean).join('\n')).catch(() => []);
   posts.forEach((p, i) => {
     if (!qs[i]?.q) return;
-    if (!['loja', 'equipe'].includes(String(p.art_photo ?? '').toLowerCase())) p.art_photo = qs[i].q;
+    if (!['loja', 'equipe'].includes(String(p.art_photo ?? '').toLowerCase()) || ['loja', 'equipe'].includes(qs[i].q.toLowerCase())) p.art_photo = qs[i].q;
     if (!p.date_label) p.art_product = qs[i].p ?? p.art_product;
   });
   await Promise.all(posts.map((p) => db.from('posts').update({ art_photo: p.art_photo, art_product: p.art_product }).eq('id', p.id)));

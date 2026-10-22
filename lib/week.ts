@@ -46,10 +46,13 @@ export async function prepareWeek(companyId: string, weekStart: string, extraCon
   const products = await productPhotoNames(companyId);
   const productsCtx = products.length ? `Fotos de produtos da loja (use o nome exato em art_product; sem preço): ${products.join('; ')}` : '';
   const learned = await learningContext(companyId);
+  const { data: own } = await supabaseAdmin().from('company_assets').select('kind').eq('company_id', companyId).in('kind', ['loja', 'equipe']);
+  const nLoja = (own ?? []).filter((a) => a.kind === 'loja').length, nEquipe = (own ?? []).filter((a) => a.kind === 'equipe').length;
+  const ownCtx = nLoja + nEquipe ? `A empresa tem fotos REAIS próprias: ${nLoja} da loja e ${nEquipe} da equipe. Use art_photo "loja" ou "equipe" em TODO post de horário, loja aberta, entrega, atendimento, bastidores e boas-vindas (são as fotos mais humanas que existem).` : '';
   // Semana já começada (ex.: depois de descartar algumas): o Claude completa só o que falta, sem repetir tema
   const have = (existing ?? []).map((p) => `${String(p.scheduled_at).slice(0, 16).replace('T', ' ')} ${p.kind}: ${p.title}`);
   const haveCtx = have.length ? `Esta semana JÁ TEM estas peças (complete só o que falta, em dias e horários livres, com temas diferentes destes):\n${have.join('\n')}` : '';
-  const context = [datesContext(weekStart, lastDay, company.segment, company.city), productsCtx, learned, haveCtx, extraContext].filter(Boolean).join('\n');
+  const context = [datesContext(weekStart, lastDay, company.segment, company.city), productsCtx, ownCtx, learned, haveCtx, extraContext].filter(Boolean).join('\n');
   const opts = { brand: buildBrand(company, brand), weekStart, quota, extraContext: context || undefined };
   return { company, quota, opts, params: weekParams(opts), refill: have.length > 0 };
 }

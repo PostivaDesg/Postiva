@@ -7,6 +7,7 @@ import { refazerFotos } from '@/lib/refazer';
 import { canvaArt, companyUsesCanva } from '@/lib/canva-art';
 import { buildReel } from '@/lib/reels';
 import { supabaseAdmin } from '@/lib/supabase';
+import { processInstagramImports } from '@/lib/instagram-import';
 
 export const maxDuration = 300;
 const BUDGET = 230_000; // deixa folga para gravar e chamar a próxima rodada
@@ -25,6 +26,13 @@ export async function POST(req: Request) {
     const db = supabaseAdmin();
     let fotos = [...(job.fotos ?? [])];
     try {
+      // 0) fotos reais do Instagram da empresa (antes de escolher as fotos dos posts)
+      if (job.importar) {
+        const faltam = await processInstagramImports(job.companyId, left);
+        if (faltam > 0) return void (await kickArtes({ ...job, started }));
+        job.importar = false;
+      }
+
       // 1) fotos, de 8 em 8 posts
       while (fotos.length && left() > 120_000) {
         const lote = fotos.slice(0, 8);
