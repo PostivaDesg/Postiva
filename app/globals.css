@@ -38,7 +38,7 @@ img { max-width: 100%; }
 /* ---------- casca: barra lateral + conteúdo ---------- */
 .shell { display: grid; grid-template-columns: 252px 1fr; min-height: 100vh; }
 .sidebar { background: var(--tinta); color: #E7E5FA; padding: 26px 16px 18px; display: flex; flex-direction: column; gap: 26px; position: sticky; top: 0; height: 100vh; }
-.marca { display: flex; align-items: baseline; gap: 6px; padding: 0 10px; color: #fff; text-decoration: none; }
+.marca { display: flex; align-items: center; padding: 0 8px; color: #fff; text-decoration: none; }
 .marca b { font-family: var(--display); font-size: 26px; letter-spacing: -0.04em; font-weight: 800; }
 .marca span { font-size: 13px; color: #A9A5D6; }
 .marca i { width: 8px; height: 8px; border-radius: 50%; background: var(--fucsia); display: inline-block; margin-left: 1px; }

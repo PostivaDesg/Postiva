@@ -9,8 +9,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: BRAND.slogan,
     start_url: '/painel',
     display: 'standalone',
-    background_color: '#F5F6F8',
-    theme_color: '#0E1726',
+    background_color: '#F4F4F8',
+    theme_color: '#17153B',
     icons: [{ src: '/icon', sizes: '512x512', type: 'image/png' }],
   };
 }

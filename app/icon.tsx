@@ -1,4 +1,4 @@
-// Ícone do app (gerado no servidor, sem arquivo de imagem).
+// Ícone do app e da aba do navegador: o símbolo da Postiva (P no quadro de post + ponto fúcsia).
 import React from 'react';
 import { ImageResponse } from 'next/og';
 
@@ -7,9 +7,12 @@ export const contentType = 'image/png';
 
 export default function Icon() {
   return new ImageResponse(
-    <div style={{ width: 512, height: 512, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0E1726', borderRadius: 112 }}>
-      <div style={{ display: 'flex', fontSize: 300, fontWeight: 700, color: '#FFFFFF', fontFamily: 'sans-serif', letterSpacing: -12 }}>p</div>
-      <div style={{ display: 'flex', position: 'absolute', top: 96, right: 120, width: 70, height: 70, borderRadius: 35, background: '#FF5A36' }} />
+    <div style={{ width: 512, height: 512, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#17153B' }}>
+      <svg width="330" height="412" viewBox="0 0 100 125">
+        <rect width="100" height="125" rx="26" fill="#FFFFFF" />
+        <path d="M38 96 V38 H56 A14 14 0 0 1 56 66 H38" fill="none" stroke="#17153B" strokeWidth="16" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx="74" cy="97" r="8" fill="#D6246E" />
+      </svg>
     </div>,
     size,
   );

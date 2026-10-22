@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
 import { BRAND } from '@/lib/brand-config';
+import { PostivaLogo } from '@/components/Logo';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -34,7 +35,7 @@ export default function LoginPage() {
   return (
     <main className="entrada">
       <section className="lado" aria-hidden="false">
-        <div className="marca"><b>postiva</b><i /><span>design</span></div>
+        <PostivaLogo size={46} invert />
         <div>
           <h1>Seu Instagram com design, todo dia.</h1>
           <p>Entre para aprovar os posts da semana, ver os contatos que chegaram pelo WhatsApp e pedir peças novas.</p>

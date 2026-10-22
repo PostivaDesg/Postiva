@@ -7,6 +7,7 @@ import { currentProfile, supabaseAdmin } from '@/lib/supabase';
 import NavLinks, { type NavItem } from './NavLinks';
 import SignOut from './SignOut';
 import { Icon } from './icons';
+import { PostivaLogo } from './Logo';
 
 export default async function AppShell({ children }: { children: ReactNode }) {
   const me = await currentProfile();
@@ -50,7 +51,7 @@ export default async function AppShell({ children }: { children: ReactNode }) {
     sub = me.full_name ?? '';
   }
 
-  const marca = <Link href={me.role === 'gestor' ? '/gestor' : '/painel'} className="marca" aria-label="Postiva Design, início"><b>postiva</b><i /><span>design</span></Link>;
+  const marca = <Link href={me.role === 'gestor' ? '/gestor' : '/painel'} className="marca" aria-label="Postiva Design, início"><PostivaLogo size={36} invert /></Link>;
   return (
     <div className="shell">
       <aside className="sidebar">

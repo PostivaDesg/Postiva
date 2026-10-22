@@ -73,10 +73,24 @@ function Logo({ t, logo, name, light, pos }: { t: Theme; logo?: string | null; n
   );
 }
 
-function Credit({ t, text, light }: { t: Theme; text?: string | null; light?: boolean }) {
+/** Selo da Postiva Design (símbolo + texto) para as artes de datas: discreto, sempre legível sobre foto ou cor. */
+export function CreditBadge({ text, size = 1 }: { text: string; size?: number }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 * size, background: 'rgba(23, 21, 59, 0.82)', borderRadius: 999, padding: `${7 * size}px ${16 * size}px ${7 * size}px ${9 * size}px` }}>
+      <svg width={20 * size} height={25 * size} viewBox="0 0 100 125">
+        <rect width="100" height="125" rx="26" fill="#FFFFFF" />
+        <path d="M38 96 V38 H56 A14 14 0 0 1 56 66 H38" fill="none" stroke="#17153B" strokeWidth="18" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx="74" cy="97" r="9" fill="#D6246E" />
+      </svg>
+      <div style={{ display: 'flex', fontSize: 20 * size, color: '#FFFFFF', letterSpacing: 0.2 }}>{text}</div>
+    </div>
+  );
+}
+
+function Credit({ t, text }: { t: Theme; text?: string | null; light?: boolean }) {
   if (!text) return null;
   const right = t.logoPosition === 'bottom-right';
-  return <div style={{ position: 'absolute', bottom: 22, [right ? 'left' : 'right']: 28, display: 'flex', fontFamily: t.body, fontSize: 22, color: light ? '#FFFFFF' : t.palette.ink, opacity: 0.7 }}>{text}</div>;
+  return <div style={{ position: 'absolute', bottom: 22, [right ? 'left' : 'right']: 24, display: 'flex', fontFamily: t.body }}><CreditBadge text={text} size={1.15} /></div>;
 }
 
 function Photo({ t, src, w, h, shape, fallback }: { t: Theme; src?: string | null; w: number; h: number; shape?: Theme['photoShape']; fallback?: string }) {
@@ -390,10 +404,12 @@ const DATE_LAYOUTS: Record<string, L> = {
         {a.logo
           ? <div style={{ display: 'flex', background: '#FFFFFF', borderRadius: 999, padding: '10px 26px' }}><img src={a.logo} style={{ height: story ? 120 : 100, maxWidth: 360, objectFit: 'contain' }} /></div>
           : <div style={{ display: 'flex', fontFamily: t.display, fontSize: 48, color: '#FFFFFF' }}>{a.brandName}</div>}
-        {a.footer && <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontFamily: t.body, fontSize: 30, color: '#FFFFFF', maxWidth: W * 0.5 }}>
-          <div style={{ display: 'flex', width: 22, height: 22, borderRadius: 11, border: '6px solid #FFFFFF' }} />{a.footer}</div>}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 12, maxWidth: W * 0.52 }}>
+          {a.footer && <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontFamily: t.body, fontSize: 28, color: '#FFFFFF' }}>
+            <div style={{ display: 'flex', width: 20, height: 20, borderRadius: 10, border: '5px solid #FFFFFF' }} />{a.footer}</div>}
+          {a.credit && <div style={{ display: 'flex', fontFamily: t.body }}><CreditBadge text={a.credit} size={1.25} /></div>}
+        </div>
       </div>
-      <Credit t={t} text={a.credit} light />
     </Frame>); },
   'data-carta': (a, W, H) => { const t = a.theme; return (
     <Frame t={{ ...t, frame: 'none' }} W={W} H={H} bg={t.palette.primary}>
