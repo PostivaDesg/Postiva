@@ -2,6 +2,7 @@
 // o assunto do post (ou pede outra busca). Usado no "Refazer fotos" e logo depois de gerar a semana.
 // Custo: ~1 a 2 mil tokens por post (miniaturas pequenas), alguns centavos por semana.
 import { anthropic, MODEL } from '../claude';
+import { photoLessons } from '../learning';
 import { supabaseAdmin } from '../supabase';
 import { photosBySubject } from './assets';
 import { allowed, bannedWords, braveImages, productImages, relevant, runLimited, saveCopy, searchStock, stockEnabled, productSearchEnabled, type Hit } from './stock';
@@ -25,7 +26,7 @@ const RESERVE: Record<string, { loja: string; equipe: string }> = {
 const TEXT_ONLY = ['tipografico', 'cartao-central', 'citacao', 'lista-numerada'];
 
 /** Claude olha as candidatas e escolhe. Devolve o índice (0 = nenhuma serve) e, se nenhuma servir, uma busca melhor. */
-async function judge(segment: string, p: PickIn, cands: Hit[], product: boolean) {
+async function judge(segment: string, p: PickIn, cands: Hit[], product: boolean, lessons = '') {
   const content: any[] = cands.map((h) => ({ type: 'image', source: { type: 'url', url: h.thumb ?? h.url } }));
   content.push({
     type: 'text',
@@ -34,6 +35,7 @@ async function judge(segment: string, p: PickIn, cands: Hit[], product: boolean)
       (product
         ? 'O post fala de um produto: a foto boa mostra a EMBALAGEM do produto, nítida, inteira, sem marca d\'água, sem montagem feia e sem texto de outra loja por cima.\n'
         : 'A foto boa mostra claramente o assunto da legenda (o produto, a pessoa ou a cena), é bonita, profissional, sem marca d\'água e sem nada que não combine com uma farmácia/loja séria.\n') +
+      (lessons ? lessons + '\n' : '') +
       'Nunca escolha: bebida alcoólica, bar, cigarro, foto escura, borrada, sem relação, com texto grande ou com logotipo de outra empresa.\n' +
       'Responda SÓ com JSON: {"escolha": número da melhor (0 se nenhuma serve), "nova_busca": "se 0, uma busca melhor em inglês de 2 a 5 palavras"}',
   });
@@ -53,7 +55,7 @@ export async function pickWithVision(company: any, posts: PickIn[], onPick?: (i:
   const reserve = RESERVE[seg] ?? RESERVE.outro;
   const banned = bannedWords(company.forbidden);
   const segName = company.segment ? String(company.segment) : 'pequena empresa';
-  const own = await photosBySubject(company.id, posts);
+  const [own, lessons] = await Promise.all([photosBySubject(company.id, posts), photoLessons(company.id)]);
   const { data: used } = await supabaseAdmin().from('posts').select('stock_photo_url').eq('company_id', company.id)
     .not('stock_photo_url', 'is', null).not('id', 'in', `(${posts.map((p) => p.id).join(',') || '00000000-0000-0000-0000-000000000000'})`).limit(300);
   const seen = new Set((used ?? []).map((u) => String(u.stock_photo_url).split('/').pop()!.replace(/\.\w+$/, '')));
@@ -77,7 +79,7 @@ export async function pickWithVision(company: any, posts: PickIn[], onPick?: (i:
 
   const choose = async (i: number, cands: Hit[], product: boolean) => {
     if (!cands.length) return null;
-    const { pick, retry } = await judge(segName, posts[i], cands, product);
+    const { pick, retry } = await judge(segName, posts[i], cands, product, lessons);
     if (pick > 0) {
       const hit = cands[pick - 1];
       seen.add(hit.key);
@@ -91,7 +93,7 @@ export async function pickWithVision(company: any, posts: PickIn[], onPick?: (i:
     if (retry && !product && stockEnabled()) {
       const again = fresh(await searchStock(retry, 30), retry);
       if (again.length) {
-        const r2 = await judge(segName, posts[i], again, false);
+        const r2 = await judge(segName, posts[i], again, false, lessons);
         if (r2.pick > 0) { const hit = again[r2.pick - 1]; seen.add(hit.key); return saveCopy(company.id, hit); }
       }
     }

@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { currentProfile, supabaseAdmin } from '@/lib/supabase';
 import { pickWithVision } from '@/lib/art/pick';
 import { photoQueries } from '@/lib/claude';
+import { photoLessons } from '@/lib/learning';
 
 export const maxDuration = 300;
 
@@ -22,7 +23,7 @@ export async function POST(req: Request) {
 
   // o Claude revê o tema de foto de cada rascunho pelo título e pela legenda (mantém "loja"/"equipe" quando há foto própria)
   const missing = posts;
-  const qs = await photoQueries(missing.map((p) => ({ headline: p.art_headline ?? '', caption: p.caption, segment: company.segment }))).catch(() => []);
+  const qs = await photoQueries(missing.map((p) => ({ headline: p.art_headline ?? '', caption: p.caption, segment: company.segment })), await photoLessons(companyId)).catch(() => []);
   missing.forEach((p, i) => {
     if (!qs[i]?.q) return;
     if (!['loja', 'equipe'].includes(String(p.art_photo ?? '').toLowerCase())) p.art_photo = qs[i].q;

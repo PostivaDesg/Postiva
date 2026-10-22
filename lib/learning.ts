@@ -1,6 +1,7 @@
 // Aprendizado por empresa: o que o gestor descartou ou editou, o que o cliente pediu para ajustar e o que aprovou.
 // Vai resumido no pedido da semana seguinte, para o Claude repetir o que funciona e evitar o que foi recusado.
 import { supabaseAdmin } from './supabase';
+import { buildBrand } from './brand';
 
 type Kind = 'descartado' | 'editado' | 'ajuste' | 'aprovado';
 
@@ -31,4 +32,24 @@ export async function learningContext(companyId: string) {
   const ok = pick('aprovado', 12);
   if (ok.length) parts.push(`O cliente APROVOU estas peças (é o estilo que funciona, varie a partir dele sem copiar):\n${ok.map(line).join('\n')}`);
   return `Aprendizados desta marca:\n${parts.join('\n\n')}`;
+}
+
+/** Lições sobre FOTO (motivos de descarte/ajuste que falam da imagem), para o Claude que escolhe as fotos. */
+export async function photoLessons(companyId: string) {
+  const since = new Date(Date.now() - 90 * 864e5).toISOString();
+  const { data } = await supabaseAdmin().from('feedback').select('kind, title, art_photo, note')
+    .eq('company_id', companyId).in('kind', ['descartado', 'ajuste']).not('note', 'is', null)
+    .gte('created_at', since).order('created_at', { ascending: false }).limit(60);
+  const rows = (data ?? []).filter((d) => /foto|imagem|fundo|pessoa|produto|combina|gen[eé]ric|feio|escur|borr/i.test(String(d.note)));
+  if (!rows.length) return '';
+  return 'Esta marca JÁ RECUSOU fotos assim (não repita o erro):\n' +
+    rows.slice(0, 20).map((d) => `- "${d.title ?? ''}"${d.art_photo ? ` (foto buscada: ${d.art_photo})` : ''} → ${d.note}`).join('\n');
+}
+
+/** Perfil da marca + o que ela já aprendeu (para pedido rápido e refação, que não passam pela semana). */
+export async function brandWithLearning(company: any, brand: any) {
+  const b = buildBrand(company, brand);
+  const learned = await learningContext(company.id);
+  if (learned) b.briefing = `${b.briefing}\n\n${learned}`;
+  return b;
 }

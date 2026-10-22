@@ -307,7 +307,7 @@ function parseJsonArray(text: string) {
 }
 
 /** Tema de foto (busca em inglês) para peças que ficaram sem art_photo. Uma chamada curta para todas. */
-export async function photoQueries(items: { headline: string; caption?: string | null; segment?: string | null }[]) {
+export async function photoQueries(items: { headline: string; caption?: string | null; segment?: string | null }[], lessons = '') {
   if (!items.length) return [] as { q: string; p: string | null }[];
   const list = items.map((it, i) => `${i + 1}. ${it.headline}${it.caption ? ` — ${String(it.caption).slice(0, 140)}` : ''}`).join('\n');
   const res = await anthropic.messages.create({
@@ -318,7 +318,7 @@ export async function photoQueries(items: { headline: string; caption?: string |
       content: `Para cada post de Instagram de ${items[0].segment ?? 'uma empresa'} abaixo, leia o título E a legenda e diga:
 - "q": a busca de foto de banco EM INGLÊS (2 a 5 palavras) que mostra exatamente o produto, a pessoa ou a cena de que a legenda fala;
 - "p": se a legenda fala de UM tipo de produto vendido na loja, o produto em português como é vendido (ex.: "protetor solar facial FPS 50"); senão null.
-Sem marcas, sem texto, sem bebida alcoólica, sem remédio de tarja.\n${list}\n\nResponda SÓ com um array JSON de objetos {"n": número do post, "q": "busca", "p": "produto ou null"}, um para cada post.`,
+Sem marcas, sem texto, sem bebida alcoólica, sem remédio de tarja.\n${lessons ? lessons + '\n' : ''}${list}\n\nResponda SÓ com um array JSON de objetos {"n": número do post, "q": "busca", "p": "produto ou null"}, um para cada post.`,
     }],
   });
   const text = res.content.filter((c) => c.type === 'text').map((c) => (c as { text: string }).text).join('');

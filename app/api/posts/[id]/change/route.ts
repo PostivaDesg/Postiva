@@ -5,7 +5,7 @@ import { buildReel } from '@/lib/reels';
 import { currentProfile, supabaseAdmin } from '@/lib/supabase';
 import { PLANS, type PlanId } from '@/lib/plans';
 import { revisePiece } from '@/lib/claude';
-import { buildBrand } from '@/lib/brand';
+import { brandWithLearning } from '@/lib/learning';
 import { photosBySubject } from '@/lib/art/assets';
 import { pickStockPhotos } from '@/lib/art/stock';
 import { recordFeedback } from '@/lib/learning';
@@ -42,7 +42,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   await recordFeedback(post.company_id, 'ajuste', { post_kind: post.kind, title: post.title, art_photo: post.art_photo, note });
 
   const { piece, usage } = await revisePiece(
-    buildBrand(company, brand),
+    await brandWithLearning(company, brand),
     {
       kind: post.kind, day: post.scheduled_at.slice(0, 10), time: post.scheduled_at.slice(11, 16),
       title: post.title, caption: post.caption, art_brief: post.art_brief, reason: post.reason ?? '',

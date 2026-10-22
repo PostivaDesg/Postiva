@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { currentProfile, supabaseAdmin } from '@/lib/supabase';
 import { resolveCompany, monthlyRemaining } from '@/lib/quota';
 import { generateQuick } from '@/lib/claude';
-import { buildBrand } from '@/lib/brand';
+import { brandWithLearning } from '@/lib/learning';
 import { newTrackingCode } from '@/lib/tracking';
 import { notifyGestor } from '@/lib/notify';
 import { withLayouts, artColumns } from '@/lib/layout-rows';
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: `A cota de ${b.kind === 'reels' ? 'reels' : b.kind + 's'} deste mês acabou. Peça uma peça extra à equipe.` }, { status: 409 });
   }
 
-  const { piece, usage } = await generateQuick(buildBrand(company, brand), { topic: b.topic, kind: b.kind, day: b.day });
+  const { piece, usage } = await generateQuick(await brandWithLearning(company, brand), { topic: b.topic, kind: b.kind, day: b.day });
   const [laid] = await withLayouts(company, [{ ...piece, kind: b.kind, day: b.day }]);
   const { data: post } = await db.from('posts').insert({
     company_id: cid, kind: b.kind, scheduled_at: `${b.day}T${piece.time ?? '12:00'}:00-03:00`,
