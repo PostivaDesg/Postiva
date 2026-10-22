@@ -180,7 +180,7 @@ const LAYOUTS: Record<string, L> = {
       <div style={{ display: 'flex', width: W, height: H }}>
         <Photo t={t} src={a.photo} w={W * 0.5} h={H} shape="full" fallback={a.brandName} />
         <div style={{ width: W * 0.5, padding: P(a), ...col(26, { justifyContent: 'center' }) }}>
-          <Headline t={t} text={a.headline} size={fit(a.headline, 84, 40)} color={t.palette.ink} align="left" />
+          <Headline t={t} text={a.headline} size={fit(a.headline, 58, 34)} color={t.palette.ink} align="left" />
           <Body t={t} text={a.sub} size={34} color={t.palette.ink} align="left" /><Cta t={t} text={a.cta} />
         </div>
       </div>
@@ -223,20 +223,23 @@ const LAYOUTS: Record<string, L> = {
       <Logo t={t} logo={a.logo} name={a.brandName} /><Credit t={t} text={a.credit} />
     </Frame>); },
 
-  'faixa-preco': (a, W, H) => { const t = a.theme; return (
-    <Frame t={t} W={W} H={H} bg={t.palette.bg}>
+  'faixa-preco': (a, W, H) => { const t = a.theme; const story = a.format === 'story'; const ph = H * (story ? 0.6 : 0.56); return (
+    <Frame t={{ ...t, frame: 'none' }} W={W} H={H} bg={t.palette.bg}>
       <div style={{ display: 'flex', flexDirection: 'column', width: W, height: H }}>
-        <div style={{ display: 'flex', height: H * 0.56, alignItems: 'center', justifyContent: 'center', background: t.palette.primary }}>
-          <div style={{ display: 'flex', marginTop: 70 }}><Photo t={t} src={a.photo} w={W * 0.66} h={H * 0.4} shape={t.photoShape === 'full' ? 'rounded' : t.photoShape} fallback={a.brandName} /></div>
+        <div style={{ display: 'flex', position: 'relative', width: W, height: ph }}>
+          <Photo t={t} src={a.photo} w={W} h={ph} shape="full" fallback={a.brandName} />
+          <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 120, display: 'flex', backgroundImage: `linear-gradient(to bottom, ${t.palette.bg}00, ${t.palette.bg})` }} />
         </div>
-        <div style={{ padding: P(a), ...col(22, { flex: 1, justifyContent: 'center' }) }}>
-          <Headline t={t} text={a.headline} size={fit(a.headline, 70, 38)} color={t.palette.ink} />
+        <div style={{ padding: `10px ${P(a)}px ${P(a) + 40}px`, ...col(22, { flex: 1, justifyContent: 'center' }) }}>
+          <Headline t={t} text={a.headline} size={fit(a.headline, 72, 40)} color={t.palette.ink} />
           <PriceTag t={t} from={a.priceFrom} to={a.priceTo} big={96} />
           {!a.priceTo && <Body t={t} text={a.sub} color={t.palette.ink} />}
+          {!a.priceTo && <Cta t={t} text={a.cta} />}
           <Small t={t} text={a.validity} color={t.palette.ink} />
         </div>
       </div>
-      <Logo t={t} logo={a.logo} name={a.brandName} light pos="top-left" /><Credit t={t} text={a.credit} />
+      <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 22, display: 'flex', background: t.palette.secondary }} />
+      <Logo t={t} logo={a.logo} name={a.brandName} pos="top-left" /><Credit t={t} text={a.credit} />
     </Frame>); },
 
   'colagem': (a, W, H) => { const t = a.theme; return (

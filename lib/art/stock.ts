@@ -149,7 +149,7 @@ export const SAMPLE_POSTS: Record<string, Sample[]> = {
   farmacia: [
     { headline: 'Comece o dia com energia', sub: 'Vitamina C para a imunidade de toda a família', query: 'vitamin c orange tablets' },
     { headline: 'Sol forte pede proteção', sub: 'Protetor solar para o rosto e para o corpo', query: 'sunscreen beach' },
-    { headline: 'Cuidado que o bebê sente', sub: 'Fraldas e lenços para o dia a dia', query: 'baby care diaper' },
+    { headline: 'Cuidado que o bebê sente', sub: 'Fraldas e lenços para o dia a dia', query: 'happy baby diaper' },
     { headline: 'Pele bonita todo dia', sub: 'Dermocosméticos para cada tipo de pele', query: 'woman skincare cream' },
   ],
   estetica: [

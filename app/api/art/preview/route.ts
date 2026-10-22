@@ -28,7 +28,7 @@ export async function GET(req: Request) {
   const isDate = l.startsWith('data-');
   const seg = toSegment(company.segment);
   const pairs = SAMPLE_POSTS[seg] ?? SAMPLE_POSTS.outro;
-  const sample = isDate ? { headline: 'Feliz Natal!', sub: `${company.name}, presente nos momentos que você mais precisa.`, query: 'christmas tree ornaments' } : pairs[n % pairs.length];
+  const sample = isDate && l === 'data-foto-equipe' ? { headline: 'Boas festas!', sub: `Obrigado por estar com a ${company.name} em mais um ano.`, query: 'christmas lights gifts' } : isDate ? { headline: 'Feliz Natal!', sub: `${company.name}, presente nos momentos que você mais precisa.`, query: 'christmas tree ornaments' } : pairs[n % pairs.length];
   // a foto sempre combina com o texto do exemplo (banco de fotos); sem banco, usa uma foto da empresa
   let photo: string | null = null;
   {
