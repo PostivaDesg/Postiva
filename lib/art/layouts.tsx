@@ -21,6 +21,7 @@ export interface ArtInput {
   dateLabel?: string | null;
   credit?: string | null;        // "Arte: Postiva Design"
   items?: string[] | null;       // lista-numerada
+  footer?: string | null;        // cidade/endereço no rodapé (datas festivas)
 }
 
 export const SIZE = { post: { w: 1080, h: 1350 }, story: { w: 1080, h: 1920 } };
@@ -148,6 +149,29 @@ const LAYOUTS: Record<string, L> = {
         <Body t={t} text={a.sub} color="#FFFFFF" /><Cta t={t} text={a.cta} />
       </div>
       <Logo t={t} logo={a.logo} name={a.brandName} light pos={t.logoPosition.startsWith('bottom') ? 'top-left' : t.logoPosition} />
+      <Credit t={t} text={a.credit} light />
+    </Frame>); },
+
+  // Foto cheia, degradê da marca subindo do rodapé, título em faixas (uma por linha) e logo centralizado embaixo
+  'foto-faixa': (a, W, H) => { const t = a.theme; const story = a.format === 'story';
+    const words = cased(t, a.headline).split(/\s+/); const lines: string[] = [];
+    for (const w of words) { const last = lines[lines.length - 1]; if (last && (last + ' ' + w).length <= 20) lines[lines.length - 1] = `${last} ${w}`; else lines.push(w); }
+    const size = Math.max(44, Math.min(story ? 76 : 68, Math.round(1500 / Math.max(10, Math.max(...lines.map((l) => l.length))))));
+    return (
+    <Frame t={{ ...t, frame: 'none' }} W={W} H={H} bg={t.palette.primary}>
+      <Photo t={t} src={a.photo} w={W} h={H} shape="full" fallback={a.brandName} />
+      <div style={{ position: 'absolute', left: 0, top: 0, width: W, height: H, display: 'flex',
+        backgroundImage: `linear-gradient(to bottom, rgba(255,255,255,0) 42%, ${t.palette.primary}55 62%, ${t.palette.primary}EE 100%)` }} />
+      <div style={{ position: 'absolute', left: 40, right: 40, bottom: story ? 300 : 210, ...col(10, { alignItems: 'center' }) }}>
+        {lines.slice(0, 4).map((l, i) => (
+          <div key={i} style={{ display: 'flex', background: t.palette.primary, color: t.onPrimary, fontFamily: t.body, fontWeight: 700, fontSize: size, lineHeight: 1.1, padding: '6px 22px', borderRadius: 14 }}>{l}</div>))}
+        {a.sub && <div style={{ display: 'flex', marginTop: 18, fontFamily: t.body, fontSize: 32, letterSpacing: 6, color: '#FFFFFF', textAlign: 'center' }}>{a.sub.toUpperCase()}</div>}
+        {a.cta && <div style={{ display: 'flex', marginTop: 14 }}><Cta t={{ ...t, headlineAlign: 'center' }} text={a.cta} /></div>}
+      </div>
+      <div style={{ position: 'absolute', left: 0, right: 0, bottom: story ? 110 : 50, display: 'flex', justifyContent: 'center' }}>
+        {a.logo ? <img src={a.logo} style={{ height: story ? 130 : 110, maxWidth: 380, objectFit: 'contain' }} />
+          : <div style={{ display: 'flex', fontFamily: t.display, fontSize: 44, color: '#FFFFFF' }}>{a.brandName}</div>}
+      </div>
       <Credit t={t} text={a.credit} light />
     </Frame>); },
 
@@ -337,6 +361,33 @@ const DATE_LAYOUTS: Record<string, L> = {
     </Frame>); },
   'data-produto': (a, W, H) => LAYOUTS['produto-flutuante']({ ...a, priceTo: null, priceFrom: null, sub: a.sub ?? a.dateLabel }, W, H),
   'data-colagem': (a, W, H) => LAYOUTS['colagem']({ ...a, sub: a.sub ?? a.dateLabel }, W, H),
+  // Estilo "cartão de data" de rede de farmácia: foto temática cheia, título manuscrito grande, marca e cidade no rodapé
+  'data-festiva': (a, W, H) => { const t = a.theme; const story = a.format === 'story';
+    const short = a.headline.length <= 24;
+    const label = a.dateLabel ?? '';
+    const script = short ? a.headline : label ? (/^feliz/i.test(label) ? label : `Feliz ${label}!`) : a.headline;
+    const sub = short ? a.sub : a.headline;
+    return (
+    <Frame t={{ ...t, frame: 'none' }} W={W} H={H} bg={t.palette.primary}>
+      <Photo t={t} src={a.photo} w={W} h={H} shape="full" fallback={a.brandName} />
+      <div style={{ position: 'absolute', left: 0, top: 0, width: W, height: H, display: 'flex',
+        backgroundImage: story
+          ? `linear-gradient(to bottom, rgba(0,0,0,0) 30%, ${t.palette.primary}E6 72%, ${t.palette.primary})`
+          : `linear-gradient(to right, rgba(0,0,0,0) 22%, ${t.palette.primary}CC 55%, ${t.palette.primary}F2 100%)` }} />
+      <div style={{ position: 'absolute', ...(story ? { left: 80, right: 80, bottom: 330 } : { left: W * 0.42, right: 64, top: H * 0.14 }), ...col(30, { alignItems: story ? 'center' : 'flex-start' }) }}>
+        <div style={{ display: 'flex', fontFamily: 'Kaushan Script', fontSize: fit(script, story ? 150 : 128, 72), lineHeight: 1.0, color: '#FFFFFF', transform: 'rotate(-5deg)', textAlign: story ? 'center' : 'left', textShadow: '0 6px 18px rgba(0,0,0,0.35)' }}>{script}</div>
+        {sub && <div style={{ display: 'flex', fontFamily: t.body, fontWeight: 700, fontSize: story ? 50 : 44, lineHeight: 1.25, color: '#FFFFFF', textAlign: story ? 'center' : 'left', marginTop: 20 }}>{sub}</div>}
+      </div>
+      <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: story ? 230 : 170, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 56px',
+        backgroundImage: `linear-gradient(to top, ${t.palette.primary}, ${t.palette.primary}00)` }}>
+        {a.logo
+          ? <div style={{ display: 'flex', background: '#FFFFFF', borderRadius: 999, padding: '10px 26px' }}><img src={a.logo} style={{ height: story ? 120 : 100, maxWidth: 360, objectFit: 'contain' }} /></div>
+          : <div style={{ display: 'flex', fontFamily: t.display, fontSize: 48, color: '#FFFFFF' }}>{a.brandName}</div>}
+        {a.footer && <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontFamily: t.body, fontSize: 30, color: '#FFFFFF', maxWidth: W * 0.5 }}>
+          <div style={{ display: 'flex', width: 22, height: 22, borderRadius: 11, border: '6px solid #FFFFFF' }} />{a.footer}</div>}
+      </div>
+      <Credit t={t} text={a.credit} light />
+    </Frame>); },
   'data-carta': (a, W, H) => { const t = a.theme; return (
     <Frame t={{ ...t, frame: 'none' }} W={W} H={H} bg={t.palette.primary}>
       <div style={{ position: 'absolute', left: 90, right: 90, top: H * 0.14, bottom: H * 0.14, background: '#FFFDF7', transform: 'rotate(-1.5deg)', boxShadow: '0 30px 60px rgba(0,0,0,0.25)', ...col(30, { padding: 80, justifyContent: 'center' }) }}>
@@ -351,7 +402,7 @@ const DATE_LAYOUTS: Record<string, L> = {
 export const LAYOUT_RENDERERS: Record<string, L> = { ...LAYOUTS, ...DATE_LAYOUTS };
 
 /** Layouts que só ficam bons com foto. Sem foto, o sistema usa os outros. */
-export const NEEDS_PHOTO = ['foto-cheia', 'divisao-vertical', 'diagonal', 'moldura', 'polaroid', 'colagem', 'faixa-preco', 'produto-flutuante', 'data-foto-equipe', 'data-colagem', 'data-produto'];
+export const NEEDS_PHOTO = ['data-festiva', 'foto-faixa', 'foto-cheia', 'divisao-vertical', 'diagonal', 'moldura', 'polaroid', 'colagem', 'faixa-preco', 'produto-flutuante', 'data-foto-equipe', 'data-colagem', 'data-produto'];
 const TEXT_ONLY = ['tipografico', 'cartao-central', 'citacao', 'lista-numerada'];
 const DATE_TEXT_ONLY = ['data-tipografica', 'data-ilustrada', 'data-minimalista', 'data-moldura', 'data-carta'];
 

@@ -61,8 +61,10 @@ Texto DENTRO da arte (a arte é gerada automaticamente com o modelo da marca):
 - art_items: 3 itens curtos só quando a peça for uma lista ou passo a passo.
 - Sem preço inventado: preço só aparece se vier da promoção informada.
 - art_photo: a foto da arte, como busca curta EM INGLÊS para um banco de fotos (2 a 5 palavras), ex.: "colorful fruit smoothies", "woman headache office", "mother baby bath".
-  Fotos reais e com vida (pessoas, ambientes, alimentos, objetos do tema), combinando com o assunto da peça. Nunca peça logotipos, marcas,
-  caixas de remédio, texto escrito ou celebridades. Use null quando a peça for só tipográfica (lista, frase, recado).
+  Fotos reais e com vida, combinando com o assunto da peça. Se a empresa vende produtos, a foto mostra o TIPO DE PRODUTO ligado ao tema
+  (ex.: post "comece o dia com energia" numa farmácia → "vitamin c orange tablets"; protetor solar → "sunscreen beach"; fralda → "baby diaper").
+  Em datas comemorativas, a foto é do símbolo da data (ex.: Natal → "christmas tree ornaments"; Carnaval → "carnival confetti masks").
+  Nunca peça logotipos, marcas, caixas de remédio com nome, texto escrito ou celebridades. Use null quando a peça for só tipográfica (lista, frase, recado).
 Se o briefing trouxer hashtags fixas da marca, use-as no final da legenda dos posts no feed.
 
 Datas comemorativas e feriados: são peças próprias e exclusivas desta marca, com mensagem afetiva ligada ao que a empresa faz (sem preço, a não ser que haja promoção informada). Marque essas peças com "date_label" igual ao nome da data.`;

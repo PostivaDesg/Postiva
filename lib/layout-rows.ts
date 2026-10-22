@@ -14,8 +14,14 @@ export async function withLayouts<T extends GeneratedPiece>(
     pieces.map((p) => ({ kind: p.kind, date_label: p.date_label, day: p.day })), company.template_spec?.layouts);
   const photos = await pickPhotos(company.id, layouts.map((l) => l.layout));
   // Sem foto própria: foto de banco gratuito com o tema que o Claude sugeriu (art_photo)
+  // Datas comemorativas também pedem foto temática (árvore de Natal, confete…): viram o layout festivo
   const stock = await pickStockPhotos(company.id, layouts.map((l, i) =>
-    !photos[i] && NEEDS_PHOTO.includes(l.layout) && !(pieces[i] as any).hasProductPhoto ? pieces[i].art_photo : null));
+    !photos[i] && (NEEDS_PHOTO.includes(l.layout) || l.isDate) && !(pieces[i] as any).hasProductPhoto ? pieces[i].art_photo : null));
+  for (let i = 0; i < layouts.length; i++) {
+    if (layouts[i].isDate && stock[i] && !NEEDS_PHOTO.includes(layouts[i].layout)) {
+      layouts[i] = { ...layouts[i], layout: 'data-festiva', brief: layouts[i].brief.replace(/^[^;]*/, (DATE_LAYOUT_TEXT as Record<string, string>)['data-festiva'] ?? 'foto temática da data') };
+    }
+  }
   // Empresa sem fotos (ou sem foto que sirva): troca layouts de foto por layouts de texto, em rodízio
   const textPool = ['tipografico', 'cartao-central', 'citacao', 'lista-numerada'];
   const dateTextPool = ['data-tipografica', 'data-ilustrada', 'data-minimalista', 'data-moldura', 'data-carta'];

@@ -20,6 +20,7 @@ export interface ArtDirection {
 }
 
 export const LAYOUTS: Record<string, string> = {
+  'foto-faixa': 'foto cheia com degradê da cor da marca subindo do rodapé, título em faixas uma por linha e logo centralizado embaixo',
   'foto-cheia': 'foto ocupando a arte inteira, texto curto numa faixa no rodapé',
   'divisao-vertical': 'arte dividida ao meio: foto de um lado, texto do outro',
   'cartao-central': 'cartão central com bordas arredondadas sobre fundo de cor da marca',
@@ -43,6 +44,7 @@ export const DATE_LAYOUTS: Record<string, string> = {
   'data-produto': 'produto da loja ligado à data, sem preço, com mensagem afetiva',
   'data-colagem': 'colagem de elementos da data em recortes de papel',
   'data-carta': 'formato de bilhete ou carta escrita à mão',
+  'data-festiva': 'foto temática cheia da data, título manuscrito grande, logo e cidade no rodapé',
 };
 
 const D = (id: string, name: string, brief: string, layouts: string[]): ArtDirection => ({ id, name, brief, layouts });

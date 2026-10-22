@@ -99,12 +99,33 @@ export async function stockDataUrl(pathOrUrl: string | null | undefined) {
   }
 }
 
-/** Temas de foto padrão por segmento (para a prévia do modelo quando a empresa ainda não tem fotos). */
-export const SAMPLE_QUERIES: Record<string, string[]> = {
-  farmacia: ['pharmacist smiling', 'fruit smoothie', 'woman skincare', 'happy family health'],
-  estetica: ['facial skincare treatment', 'woman relaxing spa', 'beauty salon', 'glowing skin woman'],
-  alimentacao: ['delicious food table', 'burger fries', 'fresh salad bowl', 'friends eating restaurant'],
-  moda: ['fashion woman street', 'clothing store', 'outfit flat lay', 'shopping bags woman'],
-  servicos: ['team working office', 'customer service smiling', 'handshake business', 'professional at work'],
-  outro: ['happy customer store', 'small business owner', 'shopping street', 'people smiling'],
+/** Exemplos para a prévia do modelo (título + foto que combinam), por segmento. */
+type Sample = { headline: string; sub: string; query: string };
+export const SAMPLE_POSTS: Record<string, Sample[]> = {
+  farmacia: [
+    { headline: 'Comece o dia com energia', sub: 'Vitamina C para a imunidade de toda a família', query: 'vitamin c orange tablets' },
+    { headline: 'Sol forte pede proteção', sub: 'Protetor solar para o rosto e para o corpo', query: 'sunscreen beach' },
+    { headline: 'Cuidado que o bebê sente', sub: 'Fraldas e lenços para o dia a dia', query: 'baby care diaper' },
+    { headline: 'Pele bonita todo dia', sub: 'Dermocosméticos para cada tipo de pele', query: 'woman skincare cream' },
+  ],
+  estetica: [
+    { headline: 'Sua pele merece uma pausa', sub: 'Limpeza de pele profunda', query: 'facial skincare treatment' },
+    { headline: 'Agenda aberta para novembro', sub: 'Garanta seu horário', query: 'woman relaxing spa' },
+  ],
+  alimentacao: [
+    { headline: 'Hoje é dia de pedir', sub: 'Entrega rápida na sua casa', query: 'burger fries' },
+    { headline: 'Feito na hora', sub: 'Ingredientes frescos todo dia', query: 'fresh food table' },
+  ],
+  moda: [
+    { headline: 'Chegou coleção nova', sub: 'Peças para o verão', query: 'fashion woman summer' },
+    { headline: 'Look pronto para o fim de semana', sub: 'Venha provar', query: 'clothing store' },
+  ],
+  servicos: [
+    { headline: 'Resolvido no mesmo dia', sub: 'Atendimento rápido e de confiança', query: 'professional at work' },
+    { headline: 'Fale com a gente', sub: 'Orçamento sem compromisso', query: 'customer service smiling' },
+  ],
+  outro: [
+    { headline: 'Novidade por aqui', sub: 'Venha conhecer', query: 'happy customer store' },
+    { headline: 'Atendimento de perto', sub: 'Do jeito que você gosta', query: 'small business owner' },
+  ],
 };

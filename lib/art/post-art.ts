@@ -1,6 +1,6 @@
 // Monta a arte de um post com o modelo da empresa.
 import { supabaseAdmin } from '../supabase';
-import { normalizeSpec, toTheme } from './theme';
+import { normalizeSpec, toTheme, variantTheme } from './theme';
 import { renderArt } from './render';
 import { assetById, assetDataUrl, logoDataUrl } from './assets';
 import { directionById } from '../styles';
@@ -32,7 +32,7 @@ export async function renderPostArt(postId: string) {
   return renderArt({
     layout: p.layout ?? 'tipografico',
     format: p.kind === 'post' ? 'post' : 'story',
-    theme: await companyTheme(company),
+    theme: variantTheme(await companyTheme(company), p.id), // cada post com sua variação
     brandName: company.name,
     logo: await logoDataUrl(company.id),
     photo,
@@ -44,6 +44,7 @@ export async function renderPostArt(postId: string) {
     priceTo: brl(promo?.price_to),
     validity: promo ? `Válido de ${br(promo.valid_from)} a ${br(promo.valid_until)} ou enquanto durar o estoque` : null,
     dateLabel: p.date_label,
+    footer: company.address ? String(company.address).split(/[,–-]/).slice(-1)[0].trim() || company.city : company.city,
     credit: p.credit ? BRAND.credit : null,
   });
 }

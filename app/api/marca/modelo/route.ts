@@ -13,7 +13,7 @@ async function previews(companyId: string, spec: any) {
   // a prévia muda quando muda o modelo, as fotos/logo enviados ou a liberação das fotos de banco
   const { count } = await supabaseAdmin().from('company_assets').select('id', { count: 'exact', head: true }).eq('company_id', companyId);
   const rev = createHash('sha1').update(`${JSON.stringify(spec)}|${count ?? 0}|${process.env.PIXABAY_API_KEY || process.env.PEXELS_API_KEY ? 's' : ''}|2`).digest('hex').slice(0, 10);
-  const layouts = [...(spec?.layouts ?? []).slice(0, 4), 'data-tipografica', 'data-moldura'];
+  const layouts = [...(spec?.layouts ?? []).slice(0, 4), 'data-festiva', 'data-moldura'];
   return layouts.map((l: string) => ({ layout: l, url: previewUrl(companyId, l, rev) }));
 }
 

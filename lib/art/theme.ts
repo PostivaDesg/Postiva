@@ -64,3 +64,23 @@ export function normalizeSpec(raw: any, fallbackLayouts: string[]): TemplateSpec
 export function toTheme(spec: TemplateSpec): Theme {
   return { ...spec, onPrimary: textOn(spec.palette.primary), onSecondary: textOn(spec.palette.secondary) };
 }
+
+/**
+ * Variação por peça: cada arte sai única, mas dentro da identidade da marca.
+ * A partir de uma semente (o id do post), alterna cor de fundo/destaque, alinhamento e forma decorativa.
+ */
+export function variantTheme(theme: Theme, seed: string): Theme {
+  const n = [...seed].reduce((s, c) => (s * 31 + c.charCodeAt(0)) >>> 0, 11);
+  const t: Theme = { ...theme, palette: { ...theme.palette } };
+  // 1 em cada 3: troca a cor principal pela de destaque (se continuar legível)
+  if (n % 3 === 1 && contrast(theme.palette.secondary, '#FFFFFF') >= 3 || n % 3 === 1 && contrast(theme.palette.secondary, '#141414') >= 7) {
+    t.palette.primary = theme.palette.secondary;
+    t.palette.secondary = theme.palette.primary;
+    t.onPrimary = textOn(t.palette.primary);
+    t.onSecondary = textOn(t.palette.secondary);
+  }
+  if ((n >> 3) % 2) t.headlineAlign = theme.headlineAlign === 'left' ? 'center' : 'left';
+  const shapes: Theme['accentShape'][] = ['wave', 'circle', 'corner', 'dots', 'stripes'];
+  if (theme.accentShape !== 'none') t.accentShape = shapes[(n >> 5) % shapes.length];
+  return t;
+}

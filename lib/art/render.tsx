@@ -10,6 +10,7 @@ export async function renderArt(input: ArtInput) {
   const fonts = [
     ...(await fontsFor(input.theme.display, input.theme.body)),
     ...(await fontsFor('Playfair Display', 'Caveat')),
+    ...(await fontsFor('Kaushan Script', 'Kaushan Script')),
   ];
   // o link de cada arte muda a cada versão (v=), então a rede da Vercel pode guardar a imagem para sempre
   return new ImageResponse(renderLayout(input), { width: w, height: h, fonts, headers: { 'Cache-Control': 'public, max-age=31536000, s-maxage=31536000, immutable' } });

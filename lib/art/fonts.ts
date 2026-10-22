@@ -15,6 +15,7 @@ export const FONT_FAMILIES = {
   'Lora': 'lora',
   'Archivo Black': 'archivo-black',
   'Space Grotesk': 'space-grotesk',
+  'Kaushan Script': 'kaushan-script',
 } as const;
 export type FontFamily = keyof typeof FONT_FAMILIES;
 
