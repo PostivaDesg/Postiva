@@ -86,6 +86,50 @@ export async function pickStockPhotos(companyId: string, queries: (string | null
   return out;
 }
 
+// ---------- Foto de produto achada na internet (busca de imagens do Brave, parecida com o Google Imagens) ----------
+// A API de busca do Google fechou para novos clientes (e acaba em 1/1/2027). O Brave tem busca de imagens com crédito
+// grátis mensal. Usado só quando a peça fala de um produto e a empresa não enviou a foto dele.
+export const productSearchEnabled = () => !!process.env.BRAVE_API_KEY;
+
+async function braveImages(query: string): Promise<Hit[]> {
+  const u = new URL('https://api.search.brave.com/res/v1/images/search');
+  u.searchParams.set('q', query.slice(0, 120));
+  u.searchParams.set('country', 'BR');
+  u.searchParams.set('search_lang', 'pt-br');
+  u.searchParams.set('count', '20');
+  u.searchParams.set('safesearch', 'strict');
+  const r = await fetch(u, { headers: { 'X-Subscription-Token': process.env.BRAVE_API_KEY!, Accept: 'application/json' }, next: { revalidate: 86400 } });
+  if (!r.ok) return [];
+  const j = (await r.json()) as { results?: { url?: string; properties?: { url?: string; width?: number; height?: number }; thumbnail?: { src?: string } }[] };
+  const out: Hit[] = [];
+  for (const it of j.results ?? []) {
+    const src = it.properties?.url;
+    const w = it.properties?.width ?? 0, h = it.properties?.height ?? 0;
+    if (!src || (w && w < 400) || (h && h < 400)) continue;
+    const key = 'web-' + [...src].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7).toString(36);
+    out.push({ key, url: src });
+    if (it.thumbnail?.src) out.push({ key: key + 't', url: it.thumbnail.src }); // se a original bloquear, a miniatura serve
+  }
+  return out;
+}
+
+/** Foto real do produto (embalagem) para cada nome; copia para o armazenamento da empresa. */
+export async function pickProductPhotos(companyId: string, names: (string | null | undefined)[]) {
+  const out: (string | null)[] = names.map(() => null);
+  if (!productSearchEnabled()) return out;
+  for (let i = 0; i < names.length; i++) {
+    const q = names[i]?.trim();
+    if (!q) continue;
+    try {
+      for (const hit of (await braveImages(`${q} embalagem produto`)).slice(0, 8)) {
+        const path = await saveCopy(companyId, hit);
+        if (path) { out[i] = path; break; }
+      }
+    } catch { /* sem foto: segue para o banco de fotos */ }
+  }
+  return out;
+}
+
 /** Foto de banco gravada no post → data URL para a arte. */
 export async function stockDataUrl(pathOrUrl: string | null | undefined) {
   if (!pathOrUrl) return null;

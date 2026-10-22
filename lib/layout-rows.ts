@@ -3,7 +3,7 @@
 import { assignLayouts, CREDIT_TEXT, LAYOUTS as LAYOUT_TEXT, DATE_LAYOUTS as DATE_LAYOUT_TEXT } from './styles';
 import { photosBySubject } from './art/assets';
 import { NEEDS_PHOTO } from './art/layouts';
-import { pickStockPhotos } from './art/stock';
+import { pickStockPhotos, pickProductPhotos } from './art/stock';
 import type { GeneratedPiece } from './claude';
 
 export async function withLayouts<T extends GeneratedPiece>(
@@ -15,9 +15,11 @@ export async function withLayouts<T extends GeneratedPiece>(
   // A foto segue o ASSUNTO da peça: produto da loja pelo nome, foto da loja/equipe quando o post é sobre elas,
   // e foto de banco gratuito pelo tema que o Claude descreveu (art_photo). Nunca uma foto qualquer do rodízio.
   const photos = await photosBySubject(company.id, pieces);
+  // Produto citado sem foto enviada pela empresa: busca a foto real da embalagem na internet (se ligado)
+  const web = await pickProductPhotos(company.id, pieces.map((p, i) => (!photos[i] && p.art_product && !layouts[i].isDate ? p.art_product : null)));
   // Datas comemorativas também pedem foto temática (árvore de Natal, confete…): viram o layout festivo
   const stock = await pickStockPhotos(company.id, layouts.map((l, i) =>
-    !photos[i] && (NEEDS_PHOTO.includes(l.layout) || l.isDate) && !(pieces[i] as any).hasProductPhoto ? (['loja', 'equipe'].includes(String(pieces[i].art_photo ?? '').toLowerCase()) ? null : pieces[i].art_photo) : null));
+    !photos[i] && !web[i] && (NEEDS_PHOTO.includes(l.layout) || l.isDate) && !(pieces[i] as any).hasProductPhoto ? (['loja', 'equipe'].includes(String(pieces[i].art_photo ?? '').toLowerCase()) ? null : pieces[i].art_photo) : null));
   for (let i = 0; i < layouts.length; i++) {
     if (layouts[i].isDate && stock[i] && !NEEDS_PHOTO.includes(layouts[i].layout)) {
       layouts[i] = { ...layouts[i], layout: 'data-festiva', brief: layouts[i].brief.replace(/^[^;]*/, (DATE_LAYOUT_TEXT as Record<string, string>)['data-festiva'] ?? 'foto temática da data') };
@@ -25,7 +27,7 @@ export async function withLayouts<T extends GeneratedPiece>(
   }
   // Foto de produto (fundo branco) fica melhor no layout de produto
   for (let i = 0; i < layouts.length; i++) {
-    if (photos[i] && pieces[i].art_product && !layouts[i].isDate && pieces[i].kind !== 'story') {
+    if ((photos[i] || web[i]) && pieces[i].art_product && !layouts[i].isDate) {
       layouts[i] = { ...layouts[i], layout: 'produto-flutuante', brief: layouts[i].brief.replace(/^[^;]*/, (LAYOUT_TEXT as Record<string, string>)['produto-flutuante'] ?? 'produto em destaque') };
     }
   }
@@ -34,7 +36,7 @@ export async function withLayouts<T extends GeneratedPiece>(
   const dateTextPool = ['data-tipografica', 'data-ilustrada', 'data-minimalista', 'data-moldura', 'data-carta'];
   let t = 0;
   for (let i = 0; i < layouts.length; i++) {
-    if (!photos[i] && !stock[i] && NEEDS_PHOTO.includes(layouts[i].layout) && !(pieces[i] as any).hasProductPhoto) {
+    if (!photos[i] && !stock[i] && !web[i] && NEEDS_PHOTO.includes(layouts[i].layout) && !(pieces[i] as any).hasProductPhoto) {
       const pool = layouts[i].isDate ? dateTextPool : textPool;
       const next = pool[t++ % pool.length];
       layouts[i] = { ...layouts[i], layout: next, brief: layouts[i].brief.replace(/^[^;]*/, (LAYOUT_TEXT as Record<string, string>)[next] ?? (DATE_LAYOUT_TEXT as Record<string, string>)[next] ?? next) };
@@ -49,7 +51,7 @@ export async function withLayouts<T extends GeneratedPiece>(
       date_label: p.date_label ?? null,
       credit,
       asset_id: photos[i],
-      stock_photo_url: photos[i] ? null : stock[i],
+      stock_photo_url: photos[i] ? null : (web[i] ?? stock[i]),
       art_photo: p.art_photo?.slice(0, 80) ?? null,
       art_headline: (p.art_headline ?? p.title ?? '').slice(0, 90),
       art_sub: p.art_sub?.slice(0, 160) ?? null,

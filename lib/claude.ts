@@ -67,8 +67,10 @@ Texto DENTRO da arte (a arte é gerada automaticamente com o modelo da marca):
   Em datas comemorativas, a foto é do símbolo da data (ex.: Natal → "christmas tree ornaments"; Carnaval → "carnival confetti masks").
   Nunca peça logotipos, marcas, caixas de remédio com nome, texto escrito ou celebridades. Use null quando a peça for só tipográfica (lista, frase, recado).
   Se a peça for sobre a própria loja ou a equipe, use exatamente "loja" ou "equipe" (a foto real da empresa entra no lugar).
-- art_product: se o contexto trouxer "Fotos de produtos da loja" e a peça falar de um desses produtos, coloque o nome EXATO da lista
-  (a foto real do produto entra na arte). Prefira esses produtos reais. Caso contrário, null. A foto, o título e a legenda falam da MESMA coisa.
+- art_product: quando a peça falar de UM produto. Se o contexto trouxer "Fotos de produtos da loja" e o produto estiver lá, use o nome EXATO
+  da lista. Senão, escreva o produto como ele é vendido (tipo + apresentação, ex.: "vitamina C efervescente 1g", "protetor solar facial FPS 50"),
+  para a foto real da embalagem ser buscada. Nunca medicamento de tarja vermelha ou preta. Nunca preço. Peça sem produto: null.
+  A foto, o título e a legenda falam da MESMA coisa.
 Se o briefing trouxer hashtags fixas da marca, use-as no final da legenda dos posts no feed.
 
 Datas comemorativas e feriados: são peças próprias e exclusivas desta marca, com mensagem afetiva ligada ao que a empresa faz (sem preço, a não ser que haja promoção informada). Marque essas peças com "date_label" igual ao nome da data.`;

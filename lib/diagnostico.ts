@@ -63,6 +63,7 @@ export async function runChecks(): Promise<Check[]> {
   });
   add('Fotos (Google Drive)', 'Conta de serviço', driveOk, false, 'Crie a conta de serviço no Google Cloud, ative a Drive API e cole a chave JSON. Sem isso, o cliente envia as fotos pelo painel.');
   add('Fotos de banco', 'Fotos gratuitas (PIXABAY_API_KEY)', has('PIXABAY_API_KEY') || has('PEXELS_API_KEY'), false, 'Crie conta grátis em pixabay.com, copie a chave em pixabay.com/api/docs e cole em PIXABAY_API_KEY. Sem isso, empresa sem foto própria recebe só artes de texto.');
+  add('Fotos de banco', 'Fotos de produtos na internet (BRAVE_API_KEY)', has('BRAVE_API_KEY'), false, 'Crie a chave em api-dashboard.search.brave.com (plano com crédito grátis mensal). Sem isso, produto sem foto enviada usa foto do banco gratuito.');
   add('Promoções (Cosmos)', 'Token do Cosmos (planilha com EAN)', has('COSMOS_TOKEN'), false, 'Cadastre-se em cosmos.bluesoft.com.br e copie o token. Sem isso, só o modo "puxar do site" funciona.');
 
   // Avisos
