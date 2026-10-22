@@ -4,7 +4,7 @@ import { currentProfile, supabaseAdmin } from '@/lib/supabase';
 import { PLANS, type PlanId } from '@/lib/plans';
 import { revisePiece } from '@/lib/claude';
 import { buildBrand } from '@/lib/brand';
-import { pickPhotos } from '@/lib/art/assets';
+import { photosBySubject } from '@/lib/art/assets';
 import { pickStockPhotos } from '@/lib/art/stock';
 
 export const maxDuration = 120;
@@ -45,7 +45,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const wantsPhoto = /foto|imagem/i.test(note) || (piece.art_photo && piece.art_photo !== post.art_photo);
   let photoPatch: Record<string, unknown> = {};
   if (wantsPhoto) {
-    const own = (await pickPhotos(post.company_id, [post.layout ?? 'foto-cheia']))[0];
+    const own = (await photosBySubject(post.company_id, [{ art_photo: piece.art_photo, art_product: piece.art_product }]))[0];
     const stock = own ? null : (await pickStockPhotos(post.company_id, [piece.art_photo ?? post.art_photo]))[0];
     photoPatch = { asset_id: own, stock_photo_url: stock ?? post.stock_photo_url };
   }

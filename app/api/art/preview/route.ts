@@ -29,10 +29,12 @@ export async function GET(req: Request) {
   const seg = toSegment(company.segment);
   const pairs = SAMPLE_POSTS[seg] ?? SAMPLE_POSTS.outro;
   const sample = isDate ? { headline: 'Feliz Natal!', sub: `${company.name}, presente nos momentos que você mais precisa.`, query: 'christmas tree ornaments' } : pairs[n % pairs.length];
-  let photo = !isDate && photos?.length ? await assetDataUrl(photos[n % photos.length]) : null;
-  if (!photo) {
+  // a foto sempre combina com o texto do exemplo (banco de fotos); sem banco, usa uma foto da empresa
+  let photo: string | null = null;
+  {
     const found = await searchStock(sample.query, 8);
     photo = found[n % Math.max(1, found.length)]?.url ?? null;
+    if (!photo && !isDate && photos?.length) photo = await assetDataUrl(photos[n % photos.length]);
   }
   return renderArt({
     layout: l, format: 'post', theme: variantTheme(await companyTheme(company), l), brandName: company.name,
