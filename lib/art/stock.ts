@@ -161,15 +161,28 @@ export async function braveImages(query: string): Promise<Hit[]> {
   return out;
 }
 
+/** Domínio do site da empresa (para buscar a foto do produto primeiro no site dela). */
+export function siteHost(url?: string | null) {
+  try { return url ? new URL(url).hostname.replace(/^www\./, '') : null; } catch { return null; }
+}
+
+/** Fotos do produto: primeiro as do site da própria empresa, depois as da internet. */
+export async function productImages(name: string, site?: string | null) {
+  const host = siteHost(site);
+  const own = host ? await braveImages(`site:${host} ${name}`) : [];
+  const web = await braveImages(`${name} embalagem produto`);
+  return [...own, ...web];
+}
+
 /** Foto real do produto (embalagem) para cada nome; copia para o armazenamento da empresa. */
-export async function pickProductPhotos(companyId: string, names: (string | null | undefined)[], banned: string[] = bannedWords()) {
+export async function pickProductPhotos(companyId: string, names: (string | null | undefined)[], banned: string[] = bannedWords(), site?: string | null) {
   const out: (string | null)[] = names.map(() => null);
   if (!productSearchEnabled()) return out;
   await runLimited(names.map((n, i) => [n, i] as const), 1, // o plano grátis do Brave aceita ~1 busca por segundo
     async ([n, i]) => {
     const q = n?.trim();
     if (!q) return;
-    for (const hit of (await braveImages(`${q} embalagem produto`)).filter((h) => allowed(h, banned)).slice(0, 8)) {
+    for (const hit of (await productImages(q, site)).filter((h) => allowed(h, banned)).slice(0, 10)) {
       const path = await saveCopy(companyId, hit);
       if (path) { out[i] = path; break; }
     }

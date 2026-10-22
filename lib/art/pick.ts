@@ -4,7 +4,7 @@
 import { anthropic, MODEL } from '../claude';
 import { supabaseAdmin } from '../supabase';
 import { photosBySubject } from './assets';
-import { allowed, bannedWords, braveImages, relevant, runLimited, saveCopy, searchStock, stockEnabled, productSearchEnabled, type Hit } from './stock';
+import { allowed, bannedWords, braveImages, productImages, relevant, runLimited, saveCopy, searchStock, stockEnabled, productSearchEnabled, type Hit } from './stock';
 import { NEEDS_PHOTO } from './layouts';
 import { toSegment } from '../dates';
 
@@ -112,7 +112,7 @@ export async function pickWithVision(company: any, posts: PickIn[], onPick?: (i:
   await Promise.all([
     runLimited(productIdx, 2, async (i) => {
       const p = posts[i];
-      const cands = fresh(await braveImages(`${p.art_product} embalagem`), '', false);
+      const cands = fresh(await productImages(p.art_product!, company.site_url), '', false); // site da empresa primeiro
       const path = await choose(i, cands, true);
       if (path) await save(i, { layout: 'produto-flutuante', asset_id: null, stock_photo_url: path });
       else await stockPick(i); // sem embalagem boa: foto de banco

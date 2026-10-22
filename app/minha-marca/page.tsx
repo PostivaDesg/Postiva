@@ -11,7 +11,7 @@ const SECTIONS: { title: string; fields: Field[] }[] = [
     ['legal_name', 'Razão social'], ['cnpj', 'CNPJ'], ['contact_name', 'Responsável'],
     ['contact_email', 'E-mail para avisos', 'email'], ['whatsapp', 'WhatsApp de pedidos (vai no botão dos posts)', 'tel'],
     ['address', 'Endereço completo'], ['opening_hours', 'Horário de funcionamento', 'text', 'Ex.: seg a sáb, 8h às 20h'],
-    ['site_url', 'Site ou loja virtual', 'url', 'https://'], ['instagram', '@ do Instagram'],
+    ['site_url', 'Site ou loja virtual (as fotos dos seus produtos são buscadas nele)', 'url', 'https://'], ['instagram', '@ do Instagram'],
   ] },
   { title: 'Conteúdo', fields: [
     ['objective', 'Objetivo principal no Instagram', 'text', 'Ex.: vender mais, levar pedidos ao WhatsApp, fortalecer a marca'],

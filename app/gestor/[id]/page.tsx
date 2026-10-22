@@ -41,6 +41,7 @@ export default async function ConfigEmpresa({ params }: { params: Promise<{ id: 
     }).eq('company_id', id);
     await supabaseAdmin().from('companies').update({
       metricool_blog_id: String(form.get('metricool') ?? '') || null,
+      site_url: /^https:\/\//.test(String(form.get('site_url') ?? '').trim()) ? String(form.get('site_url')).trim() : null,
       art_style: String(form.get('art_style') ?? '') || null,
       credit_all: form.get('credit_all') === 'on',
     }).eq('id', id);
@@ -100,6 +101,8 @@ export default async function ConfigEmpresa({ params }: { params: Promise<{ id: 
         {campo('tone', 'Tom de voz', brand?.tone ?? '', 6, 'Como a marca fala + 2 ou 3 legendas aprovadas como exemplo.')}
         {campo('rules', 'Proibições e regras', brand?.rules ?? '', 5, 'O que nunca pode ser dito ou mostrado.')}
         {campo('visual', 'Identidade visual', brand?.visual ?? '', 4, 'Cores, fontes, estilo das artes, modelos do Canva.')}
+        <div><label htmlFor="site_url">Site da empresa</label><input id="site_url" name="site_url" type="url" placeholder="https://" defaultValue={company?.site_url ?? ''} />
+          <p className="muted" style={{ fontSize: 13 }}>As fotos de produto são buscadas primeiro neste site; também é usado nas promoções.</p></div>
         <div><label htmlFor="metricool">ID da marca no Metricool</label><input id="metricool" name="metricool" defaultValue={company?.metricool_blog_id ?? ''} /></div>
         <div><label htmlFor="art_style">Direção de arte</label>
           <select id="art_style" name="art_style" defaultValue={company?.art_style ?? ''} >

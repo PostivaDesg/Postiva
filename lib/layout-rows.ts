@@ -7,7 +7,7 @@ import { pickStockPhotos, pickProductPhotos, bannedWords } from './art/stock';
 import type { GeneratedPiece } from './claude';
 import { toSegment } from './dates';
 
-type Company = { id: string; art_style: string | null; credit_all: boolean | null; segment?: string | null; forbidden?: string | null; template_spec?: { layouts?: string[]; notes?: string } | null };
+type Company = { id: string; art_style: string | null; credit_all: boolean | null; segment?: string | null; forbidden?: string | null; site_url?: string | null; template_spec?: { layouts?: string[]; notes?: string } | null };
 
 // Temas de reserva quando a peça não trouxe foto (ou pediu foto da loja/equipe e a empresa não tem)
 const RESERVE: Record<string, { loja: string; equipe: string; geral: string[] }> = {
@@ -34,7 +34,7 @@ export async function planPhotos(company: Company, items: PlanIn[]) {
   const seg = RESERVE[toSegment(company.segment)] ?? RESERVE.outro;
   const banned = bannedWords(company.forbidden);
   const photos = await photosBySubject(company.id, items);
-  const web = await pickProductPhotos(company.id, items.map((p, i) => (!photos[i] && p.art_product && !p.isDate ? p.art_product : null)), banned);
+  const web = await pickProductPhotos(company.id, items.map((p, i) => (!photos[i] && p.art_product && !p.isDate ? p.art_product : null)), banned, company.site_url);
   let r = 0;
   const queryOf = (p: PlanIn) => {
     const ap = (p.art_photo ?? '').trim(); const low = ap.toLowerCase();
