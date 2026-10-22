@@ -1,13 +1,9 @@
 // Fotos e logo para as artes: carrega como data URL e escolhe a foto de cada post em rodízio.
 import { supabaseAdmin } from '../supabase';
 import { downloadFile } from '../drive';
+import { toArtDataUrl } from './image-bytes';
 
 type Asset = { id: string; kind: string; storage_path: string | null; drive_file_id: string | null; name: string };
-
-const mimeOf = (name: string, fallback = 'image/jpeg') => {
-  const ext = name.toLowerCase().split('.').pop();
-  return ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : fallback;
-};
 
 export async function assetDataUrl(a: Asset | null | undefined) {
   if (!a) return null;
@@ -15,12 +11,9 @@ export async function assetDataUrl(a: Asset | null | undefined) {
     if (a.storage_path) {
       const { data } = await supabaseAdmin().storage.from('marcas').download(a.storage_path);
       if (!data) return null;
-      return `data:${data.type || mimeOf(a.name)};base64,${Buffer.from(await data.arrayBuffer()).toString('base64')}`;
+      return toArtDataUrl(await data.arrayBuffer());
     }
-    if (a.drive_file_id) {
-      const bytes = await downloadFile(a.drive_file_id);
-      return `data:${mimeOf(a.name)};base64,${Buffer.from(bytes).toString('base64')}`;
-    }
+    if (a.drive_file_id) return toArtDataUrl(await downloadFile(a.drive_file_id) as ArrayBuffer);
   } catch { /* sem a imagem, o layout usa a versão só com texto */ }
   return null;
 }

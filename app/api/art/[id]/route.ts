@@ -4,6 +4,7 @@ import { verify } from '@/lib/art/url';
 import { renderPostArt } from '@/lib/art/post-art';
 
 export const runtime = 'nodejs';
+export const maxDuration = 30; // baixar logo e foto + desenhar a arte
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

@@ -1,5 +1,6 @@
 'use client';
 // Envio do vídeo do reels direto para o armazenamento (sem passar pelo servidor do site).
+import { readJSON } from '@/lib/client-fetch';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
@@ -10,7 +11,7 @@ export default function VideoUpload({ postId, title }: { postId: string; title: 
 
   async function send(file: File) {
     setStatus('Preparando envio…');
-    const call = (body: object) => fetch(`/api/posts/${postId}/video`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(async (r) => ({ ok: r.ok, j: await r.json() }));
+    const call = (body: object) => fetch(`/api/posts/${postId}/video`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(async (r) => ({ ok: r.ok, j: await readJSON(r) }));
     const link = await call({ action: 'link', type: file.type, size: file.size });
     if (!link.ok) return setStatus(link.j.error);
     setStatus('Enviando o vídeo… não feche esta página.');

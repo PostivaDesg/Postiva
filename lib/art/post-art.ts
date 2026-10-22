@@ -6,6 +6,7 @@ import { assetById, assetDataUrl, logoDataUrl } from './assets';
 import { directionById } from '../styles';
 import { BRAND } from '../brand-config';
 import { stockDataUrl } from './stock';
+import { remoteToDataUrl } from './image-bytes';
 
 const brl = (n: number | null | undefined) => (n == null ? null : Number(n).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }));
 const br = (d?: string | null) => (d ? d.split('-').reverse().slice(0, 2).join('/') : '');
@@ -38,7 +39,8 @@ export async function renderPostArt(postId: string) {
     const { data } = await db.from('promo_items').select('*').eq('id', p.promo_item_ids[0]).single();
     promo = data;
   }
-  const photo = promo?.photo_url ?? (await assetDataUrl(await assetById(p.asset_id))) ?? (await stockDataUrl(p.stock_photo_url));
+  // foto da promoção vem de site de terceiros: baixa e confere o formato (WEBP quebraria a arte)
+  const photo = (await remoteToDataUrl(promo?.photo_url)) ?? (await assetDataUrl(await assetById(p.asset_id))) ?? (await stockDataUrl(p.stock_photo_url));
 
   return renderArt({
     layout: p.layout ?? 'tipografico',

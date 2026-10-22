@@ -1,5 +1,6 @@
 'use client';
 // Um post para aprovar: arte à esquerda, legenda e decisão à direita.
+import { readJSON } from '@/lib/client-fetch';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -15,9 +16,9 @@ export default function PostCard(p: {
     setModo('enviando');
     const r = await fetch(`/api/posts/${p.id}/${path}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body ?? {}),
-    });
-    const j = await r.json();
-    if (!r.ok) { setMsg(j.error); setModo('idle'); return; }
+    }).catch(() => null);
+    const j = r ? await readJSON(r) : { error: 'Sem conexão com o servidor. Tente de novo.' };
+    if (!r?.ok) { setMsg(j.error); setModo('idle'); return; }
     router.refresh();
   }
 

@@ -47,7 +47,8 @@ async function judge(segment: string, p: PickIn, cands: Hit[], product: boolean)
   }
 }
 
-export async function pickWithVision(company: any, posts: PickIn[]): Promise<PickOut[]> {
+/** onPick grava cada escolha assim que sai (se a Vercel cortar por tempo, o que já foi escolhido fica salvo). */
+export async function pickWithVision(company: any, posts: PickIn[], onPick?: (i: number, out: PickOut) => Promise<void>): Promise<PickOut[]> {
   const seg = toSegment(company.segment);
   const reserve = RESERVE[seg] ?? RESERVE.outro;
   const banned = bannedWords(company.forbidden);
@@ -92,17 +93,11 @@ export async function pickWithVision(company: any, posts: PickIn[]): Promise<Pic
     return null;
   };
 
-  await runLimited(productIdx, 1, async (i) => {
-    const p = posts[i];
-    const cands = fresh(await braveImages(`${p.art_product} embalagem`), '', false);
-    const path = await choose(i, cands, true);
-    if (path) { out[i] = { layout: 'produto-flutuante', asset_id: null, stock_photo_url: path }; return; }
-    restIdx.push(i); // sem embalagem boa: tenta foto de banco
-  });
+  const save = async (i: number, o: PickOut) => { out[i] = o; if (onPick) await onPick(i, o).catch(() => {}); };
 
-  await runLimited(restIdx, 5, async (i) => {
+  const stockPick = async (i: number) => {
     const p = posts[i];
-    if (own[i]) { out[i] = { layout: TEXT_ONLY.includes(p.layout) ? photoPool[k++ % photoPool.length] : p.layout, asset_id: own[i], stock_photo_url: null }; return; }
+    if (own[i]) { await save(i, { layout: TEXT_ONLY.includes(p.layout) ? photoPool[k++ % photoPool.length] : p.layout, asset_id: own[i], stock_photo_url: null }); return; }
     if (!stockEnabled()) return;
     const q = queryOf(p);
     const path = await choose(i, fresh(await searchStock(q, 30), q), false);
@@ -110,7 +105,19 @@ export async function pickWithVision(company: any, posts: PickIn[]): Promise<Pic
     let layout = p.layout;
     if (p.date_label) { if (!NEEDS_PHOTO.includes(layout)) layout = 'data-festiva'; }
     else if (TEXT_ONLY.includes(layout) || layout === 'produto-flutuante') layout = photoPool[k++ % photoPool.length];
-    out[i] = { layout, asset_id: null, stock_photo_url: path };
-  });
+    await save(i, { layout, asset_id: null, stock_photo_url: path });
+  };
+
+  // Produtos (embalagem) e fotos de banco andam AO MESMO TEMPO; as buscas do Brave já entram em fila de 1 por segundo
+  await Promise.all([
+    runLimited(productIdx, 2, async (i) => {
+      const p = posts[i];
+      const cands = fresh(await braveImages(`${p.art_product} embalagem`), '', false);
+      const path = await choose(i, cands, true);
+      if (path) await save(i, { layout: 'produto-flutuante', asset_id: null, stock_photo_url: path });
+      else await stockPick(i); // sem embalagem boa: foto de banco
+    }),
+    runLimited(restIdx, 5, stockPick),
+  ]);
   return out;
 }

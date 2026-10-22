@@ -1,4 +1,5 @@
 'use client';
+import { readJSON } from '@/lib/client-fetch';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -19,8 +20,9 @@ export default function GenerateWeek({ companyId, drafts }: {
 
   async function post(url: string, body: object, ok: (j: any) => string) {
     setStatus('Trabalhando…');
-    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    const j = await r.json();
+    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).catch(() => null);
+    if (!r) { setStatus('Sem conexão com o servidor. Tente de novo.'); return; }
+    const j = await readJSON(r);
     setStatus(r.ok ? ok(j) : j.error);
     router.refresh();
   }
@@ -38,8 +40,9 @@ export default function GenerateWeek({ companyId, drafts }: {
       <button className="btn" style={{ justifySelf: 'start' }}
         onClick={async () => {
           setStatus('Escrevendo as peças com o Claude… (2 a 3 minutos)');
-          const r = await fetch('/api/gestor/generate-week', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ companyId, weekStart: week, extraContext: extra }) });
-          const j = await r.json();
+          const r = await fetch('/api/gestor/generate-week', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ companyId, weekStart: week, extraContext: extra }) }).catch(() => null);
+          if (!r) { setStatus('Sem conexão com o servidor. Tente de novo.'); return; }
+          const j = await readJSON(r);
           if (!r.ok) { setStatus(j.error); return; }
           // em seguida, o Claude olha e escolhe a foto de cada peça nova (outra chamada: cabe no tempo da Vercel)
           await post('/api/gestor/refazer-fotos', { companyId, postIds: j.ids }, (f) => `${j.created} peças criadas como rascunho, ${f.withPhoto} com foto escolhida.`);

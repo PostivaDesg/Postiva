@@ -293,7 +293,12 @@ function parseJsonArray(text: string) {
   const start = text.indexOf('[');
   const end = text.lastIndexOf(']');
   if (start < 0 || end < 0) throw new Error('O Claude não devolveu um JSON válido.');
-  return JSON.parse(text.slice(start, end + 1));
+  try { return JSON.parse(text.slice(start, end + 1)); }
+  catch {
+    // resposta quase certa (vírgula sobrando antes de ] ou }): corrige e tenta de novo
+    const fixed = text.slice(start, end + 1).replace(/,\s*([\]}])/g, '$1');
+    try { return JSON.parse(fixed); } catch { throw new Error('O Claude devolveu a semana com um erro de formato. Clique em gerar de novo (só o que faltar será criado).'); }
+  }
 }
 
 /** Tema de foto (busca em inglês) para peças que ficaram sem art_photo. Uma chamada curta para todas. */

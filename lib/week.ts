@@ -54,11 +54,11 @@ export async function prepareWeek(companyId: string, weekStart: string, extraCon
   return { company, quota, opts, params: weekParams(opts), refill: have.length > 0 };
 }
 
-export async function saveWeek(company: any, quota: Record<PostKind, number>, pieces: GeneratedPiece[], usage: Record<string, unknown>) {
+export async function saveWeek(company: any, quota: Record<PostKind, number>, pieces: GeneratedPiece[], usage: Record<string, unknown>, opts: { photos?: boolean } = {}) {
   const db = supabaseAdmin();
   const left = { ...quota };
   const kept = pieces.filter((p) => ['story', 'post', 'reels'].includes(p.kind) && /^\d{4}-\d{2}-\d{2}$/.test(p.day) && left[p.kind]-- > 0);
-  const laid = await withLayouts(company, kept); // rodízio de layouts e fotos + arte exclusiva nas datas
+  const laid = await withLayouts(company, kept, opts); // rodízio de layouts e fotos + arte exclusiva nas datas
   const rows = laid.map((l) => {
     const p = l.piece;
     const time = /^\d{2}:\d{2}$/.test(p.time ?? '') ? p.time : '12:00';
@@ -79,7 +79,7 @@ export async function generateWeekFor(companyId: string, weekStart: string, extr
   if (refill || quota.story + quota.post + quota.reels <= 20) {
     // completar a semana: poucas peças, um pedido só (o Claude vê os dias livres)
     const one = await generateWeek(opts);
-    const ids = await saveWeek(company, quota, one.pieces, one.usage);
+    const ids = await saveWeek(company, quota, one.pieces, one.usage, { photos: false });
     return { created: ids.length, ids, companyName: company.name as string };
   }
   // Na hora (plano grátis da Vercel corta em 5 min): a semana vai em 2 pedidos ao mesmo tempo, dias 1–4 e 5–7.
@@ -97,6 +97,6 @@ export async function generateWeekFor(companyId: string, weekStart: string, extr
   const usage = parts.map((p) => p.usage).filter(Boolean).reduce((a, u) => ({
     ...a, input_tokens: a.input_tokens + u.input_tokens, output_tokens: a.output_tokens + u.output_tokens, cache_read_tokens: a.cache_read_tokens + u.cache_read_tokens,
   }));
-  const ids = await saveWeek(company, quota, pieces, usage);
+  const ids = await saveWeek(company, quota, pieces, usage, { photos: false }); // fotos: logo depois, com o olho do Claude
   return { created: ids.length, ids, companyName: company.name as string };
 }

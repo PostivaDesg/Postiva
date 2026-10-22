@@ -31,6 +31,7 @@ export default async function AppShell({ children }: { children: ReactNode }) {
     who = me.full_name ?? 'Gestor';
     sub = 'Gestor da Postiva';
   } else {
+    if (!me.company_id) redirect('/login?erro=sem-empresa');
     const [{ data: company }, { count: pend }] = await Promise.all([
       db.from('companies').select('name').eq('id', me.company_id!).single(),
       db.from('posts').select('id', { count: 'exact', head: true }).eq('company_id', me.company_id!).eq('status', 'aguardando'),

@@ -15,18 +15,18 @@ export default async function Diagnostico() {
 
   return (
     <div className="pilha" style={{maxWidth: 860}}>
-      <h1 style={{ margin: 0 }}>Diagnóstico da configuração</h1>
-      <p style={{ margin: 0, fontWeight: 600, color: missing ? '#A1281F' : '#17704A' }}>
+      <header className="cabecalho"><div><h1>Diagnóstico da configuração</h1></div></header>
+      <p style={{ margin: 0, fontWeight: 600, color: missing ? '#A1281F' : 'var(--verde)' }}>
         {missing ? `${missing} itens obrigatórios faltando.` : 'Tudo o que é obrigatório está funcionando.'}
       </p>
       {areas.map((a) => (
-        <section key={a} className="card" style={{ display: 'grid', gap: 10 }}>
-          <h2 style={{ margin: 0, fontSize: 18 }}>{a}</h2>
+        <section key={a} className="painel" style={{ display: 'grid', gap: 10 }}>
+          <h2 style={{ margin: 0 }}>{a}</h2>
           {checks.filter((c) => c.area === a).map((c) => (
             <div key={c.item} style={{ display: 'grid', gap: 2 }}>
-              <span style={{ fontWeight: 600 }}>
-                <span aria-hidden="true" style={{ color: c.ok ? '#17704A' : c.required ? '#A1281F' : '#9A4E05' }}>{c.ok ? '✓' : c.required ? '✗' : '○'}</span>{' '}
-                {c.item}{!c.required && <span className="muted" style={{ fontWeight: 400 }}> (opcional)</span>}
+              <span style={{ fontWeight: 600, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                <span className={`status ${c.ok ? 'aprovado' : c.required ? 'problema' : 'aguardando'}`}>{c.ok ? 'Funcionando' : c.required ? 'Falta' : 'Opcional'}</span>
+                {c.item}
               </span>
               {!c.ok && <span className="muted" style={{ fontSize: 14 }}>{c.fix}</span>}
             </div>

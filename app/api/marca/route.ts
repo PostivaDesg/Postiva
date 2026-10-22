@@ -18,7 +18,12 @@ export async function GET(req: Request) {
   if (!cid) return NextResponse.json({ error: 'Empresa não informada.' }, { status: 400 });
   const db = supabaseAdmin();
   const { data: company } = await db.from('companies').select(['name', 'drive_folder_id', 'bio_code', 'brand_colors', 'auto_approve_hours', ...EDITABLE].join(',')).eq('id', cid).single();
-  const { data: assets } = await db.from('company_assets').select('id, kind, source, name, created_at').eq('company_id', cid).order('created_at', { ascending: false }).limit(200);
+  const { data: rows } = await db.from('company_assets').select('id, kind, source, name, created_at, storage_path').eq('company_id', cid).order('created_at', { ascending: false }).limit(200);
+  // miniaturas das imagens enviadas (links temporários de 1 hora; as do Drive aparecem só pelo nome)
+  const paths = (rows ?? []).filter((a) => a.storage_path).slice(0, 60).map((a) => a.storage_path as string);
+  const { data: signed } = paths.length ? await db.storage.from('marcas').createSignedUrls(paths, 3600) : { data: [] as { path: string | null; signedUrl: string }[] };
+  const urlOf = new Map((signed ?? []).map((x) => [x.path, x.signedUrl]));
+  const assets = (rows ?? []).map(({ storage_path, ...a }) => ({ ...a, url: storage_path ? urlOf.get(storage_path) ?? null : null }));
   return NextResponse.json({ company, assets, driveEmail: serviceEmail() });
 }
 

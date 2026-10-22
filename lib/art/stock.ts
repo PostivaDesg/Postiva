@@ -4,6 +4,7 @@
 // da empresa (bucket "marcas", pasta banco/) e a arte lê dali. As buscas ficam em cache por 24h.
 // Sem nenhuma das chaves, nada muda: o site usa só as fotos da empresa e os layouts de texto.
 import { supabaseAdmin } from '../supabase';
+import { imageMime, toArtDataUrl, MAX_ART_IMAGE } from './image-bytes';
 
 export type Hit = { key: string; url: string; tags?: string; thumb?: string }; // key: "pixabay-123" / "pexels-456" (para não repetir)
 
@@ -42,8 +43,8 @@ async function pixabay(query: string, perPage: number): Promise<Hit[]> {
   u.searchParams.set('orientation', 'vertical');
   u.searchParams.set('safesearch', 'true');
   u.searchParams.set('per_page', String(Math.max(3, Math.min(50, perPage))));
-  const r = await fetch(u, { next: { revalidate: 86400 } }); // cache de 24h exigido pelo Pixabay
-  if (!r.ok) return [];
+  const r = await fetch(u, { next: { revalidate: 86400 }, signal: AbortSignal.timeout(12000) }).catch(() => null); // cache de 24h exigido pelo Pixabay
+  if (!r?.ok) return [];
   const j = (await r.json()) as { hits?: { id: number; largeImageURL: string; webformatURL: string; tags?: string }[] };
   return (j.hits ?? []).map((h) => ({ key: `pixabay-${h.id}`, url: h.largeImageURL || h.webformatURL, tags: h.tags, thumb: h.webformatURL }));
 }
@@ -76,13 +77,14 @@ export async function searchStock(query: string, perPage = 15): Promise<Hit[]> {
 /** Copia a foto para o armazenamento da empresa e devolve o caminho ("banco/..."). */
 export async function saveCopy(companyId: string, hit: Hit) {
   try {
-    const r = await fetch(hit.url);
+    const r = await fetch(hit.url, { signal: AbortSignal.timeout(15000) });
     if (!r.ok) return null;
-    const type = r.headers.get('content-type') ?? 'image/jpeg';
-    // só JPG e PNG: o gerador de artes não lê WEBP/AVIF (era o "prévia não aparece")
-    if (!/image\/(jpe?g|png)/.test(type)) return null;
-    const path = `${companyId}/banco/${hit.key}.${type.includes('png') ? 'png' : 'jpg'}`;
-    const { error } = await supabaseAdmin().storage.from('marcas').upload(path, await r.arrayBuffer(), { contentType: type, upsert: true });
+    const bytes = new Uint8Array(await r.arrayBuffer());
+    // só JPG e PNG (pelos bytes, não pelo cabeçalho) e até 6 MB: o gerador de artes não lê WEBP/AVIF
+    const mime = bytes.length <= MAX_ART_IMAGE ? imageMime(bytes) : null;
+    if (!mime) return null;
+    const path = `${companyId}/banco/${hit.key}.${mime === 'image/png' ? 'png' : 'jpg'}`;
+    const { error } = await supabaseAdmin().storage.from('marcas').upload(path, bytes, { contentType: mime, upsert: true });
     return error ? null : path;
   } catch {
     return null;
@@ -127,15 +129,25 @@ export async function runLimited<T>(items: T[], limit: number, fn: (x: T) => Pro
 // grátis mensal. Usado só quando a peça fala de um produto e a empresa não enviou a foto dele.
 export const productSearchEnabled = () => !!process.env.BRAVE_API_KEY;
 
+let braveNext = 0;
+/** O plano grátis do Brave aceita ~1 busca por segundo: as buscas entram em fila com 1,1 s entre elas. */
+async function braveSlot() {
+  const now = Date.now();
+  const wait = Math.max(0, braveNext - now);
+  braveNext = Math.max(now, braveNext) + 1100;
+  if (wait) await new Promise((r) => setTimeout(r, wait));
+}
+
 export async function braveImages(query: string): Promise<Hit[]> {
+  await braveSlot();
   const u = new URL('https://api.search.brave.com/res/v1/images/search');
   u.searchParams.set('q', query.slice(0, 120));
   u.searchParams.set('country', 'BR');
   u.searchParams.set('search_lang', 'pt-br');
   u.searchParams.set('count', '20');
   u.searchParams.set('safesearch', 'strict');
-  const r = await fetch(u, { headers: { 'X-Subscription-Token': process.env.BRAVE_API_KEY!, Accept: 'application/json' }, next: { revalidate: 86400 } });
-  if (!r.ok) return [];
+  const r = await fetch(u, { headers: { 'X-Subscription-Token': process.env.BRAVE_API_KEY!, Accept: 'application/json' }, next: { revalidate: 86400 }, signal: AbortSignal.timeout(12000) }).catch(() => null);
+  if (!r?.ok) return [];
   const j = (await r.json()) as { results?: { title?: string; url?: string; properties?: { url?: string; width?: number; height?: number }; thumbnail?: { src?: string } }[] };
   const out: Hit[] = [];
   for (const it of j.results ?? []) {
@@ -171,8 +183,7 @@ export async function stockDataUrl(pathOrUrl: string | null | undefined) {
   if (/^https?:\/\//.test(pathOrUrl)) return pathOrUrl; // posts antigos
   try {
     const { data } = await supabaseAdmin().storage.from('marcas').download(pathOrUrl);
-    if (!data) return null;
-    return `data:${data.type || 'image/jpeg'};base64,${Buffer.from(await data.arrayBuffer()).toString('base64')}`;
+    return data ? toArtDataUrl(await data.arrayBuffer()) : null;
   } catch {
     return null;
   }

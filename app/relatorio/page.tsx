@@ -48,11 +48,11 @@ export default async function Relatorio({ searchParams }: { searchParams: Promis
       </header>
 
       <section className="grid" aria-label="Números do mês">
-        {byKind.map(({ k, n }) => <div className="card" key={k}><span className="muted">{KIND[k]} publicados</span><div style={{ fontSize: 30, fontWeight: 600 }}>{n}</div></div>)}
-        <div className="card"><span className="muted">Cliques no WhatsApp</span><div style={{ fontSize: 30, fontWeight: 600 }}>{clicks?.length ?? 0}</div><span className="muted" style={{ fontSize: 13 }}>{bio} pela bio</span></div>
+        {byKind.map(({ k, n }) => <div className="painel" key={k}><span className="muted">{KIND[k]} publicados</span><div style={{ fontSize: 30, fontWeight: 600 }}>{n}</div></div>)}
+        <div className="painel"><span className="muted">Cliques no WhatsApp</span><div style={{ fontSize: 30, fontWeight: 600 }}>{clicks?.length ?? 0}</div><span className="muted" style={{ fontSize: 13 }}>{bio} pela bio</span></div>
       </section>
 
-      <section className="card">
+      <section className="painel">
         <h2 style={{ marginTop: 0 }}>O que mais trouxe contato</h2>
         {top.length ? (
           <ol style={{ margin: 0, paddingLeft: 20, lineHeight: 1.8 }}>
@@ -61,7 +61,7 @@ export default async function Relatorio({ searchParams }: { searchParams: Promis
         ) : <p className="muted" style={{ margin: 0 }}>Ainda sem cliques registrados. Use o link da bio e os adesivos de link nos stories.</p>}
       </section>
 
-      <section className="card">
+      <section className="painel">
         <h2 style={{ marginTop: 0 }}>Destaques</h2>
         <ul style={{ margin: 0, paddingLeft: 20, lineHeight: 1.8 }}>
           <li>{published.filter((p) => p.promo_item_ids?.length).length} peças de promoção</li>

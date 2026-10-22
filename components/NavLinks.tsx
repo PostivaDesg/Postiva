@@ -10,7 +10,10 @@ export default function NavLinks({ items }: { items: NavItem[] }) {
   const path = usePathname();
   const active = (href: string) => {
     const base = href.split('?')[0];
-    return base === '/gestor' ? path === '/gestor' : path === base || path.startsWith(base + '/');
+    if (base === '/gestor' || base === '/painel') return path === base; // Início/Visão geral só na própria página
+    // a página de uma empresa (/gestor/<id>) fica dentro de "Empresas"
+    if (base === '/gestor/empresas') return path.startsWith('/gestor/empresas') || /^\/gestor\/[0-9a-f-]{36}/.test(path);
+    return path === base || path.startsWith(base + '/');
   };
   let lastGroup: string | undefined;
   return (

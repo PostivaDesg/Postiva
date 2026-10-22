@@ -8,7 +8,7 @@ export async function POST(req: Request) {
   if (req.headers.get('asaas-access-token') !== process.env.ASAAS_WEBHOOK_TOKEN) {
     return NextResponse.json({ error: 'token inválido' }, { status: 401 });
   }
-  const evt = await req.json() as { event: string; payment?: { subscription?: string; dueDate?: string } };
+  const evt = await req.json().catch(() => ({})) as { event?: string; payment?: { subscription?: string; dueDate?: string } };
   const subId = evt.payment?.subscription;
   if (!subId) return NextResponse.json({ ok: true });
 

@@ -5,7 +5,7 @@ import { currentProfile, supabaseAdmin } from '@/lib/supabase';
 import { resolveCompany } from '@/lib/quota';
 
 const KINDS = ['logo', 'loja', 'equipe', 'produto', 'outro', 'referencia'];
-const TYPES = ['image/png', 'image/jpeg', 'image/webp']; // SVG fica de fora: pode carregar script
+const TYPES = ['image/png', 'image/jpeg']; // o gerador de artes só lê PNG e JPG (SVG também fica de fora: pode carregar script)
 
 export async function POST(req: Request) {
   const me = await currentProfile();
@@ -22,8 +22,8 @@ export async function POST(req: Request) {
   let saved = 0;
   const errors: string[] = [];
   for (const f of files) {
-    if (!TYPES.includes(f.type)) { errors.push(`${f.name}: formato não aceito (use PNG, JPG ou WEBP).`); continue; }
-    if (f.size > 10_000_000) { errors.push(`${f.name}: maior que 10 MB.`); continue; }
+    if (!TYPES.includes(f.type)) { errors.push(`${f.name}: formato não aceito. Use PNG ou JPG (no celular, um print da foto resolve).`); continue; }
+    if (f.size > 6_000_000) { errors.push(`${f.name}: maior que 6 MB. Envie uma versão menor.`); continue; }
     const safeName = f.name.normalize('NFD').replace(/[^\w.-]/g, '_').slice(-80);
     const path = `${cid}/${randomUUID()}-${safeName}`;
     const { error } = await db.storage.from('marcas').upload(path, f, { contentType: f.type });

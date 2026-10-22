@@ -1,4 +1,5 @@
 'use client';
+import { readJSON } from '@/lib/client-fetch';
 import { useEffect, useRef, useState } from 'react';
 
 type Item = {
@@ -55,10 +56,10 @@ function Card({ it, onDone }: { it: Item; onDone: () => void }) {
     const r = await fetch('/api/gestor/review', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ postId: it.id, action, title, caption, seconds: seconds.current, reason }),
-    });
-    const j = await r.json();
+    }).catch(() => null);
+    const j = r ? await readJSON(r) : { error: 'Sem conexão com o servidor. Tente de novo.' };
     setBusy(false);
-    if (!r.ok) return setErr(j.error);
+    if (!r?.ok) return setErr(j.error);
     onDone();
   }
 

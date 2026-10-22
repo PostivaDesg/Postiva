@@ -8,7 +8,7 @@ export default function ApproveAll({ count }: { count: number }) {
   async function go() {
     if (!confirm(`Aprovar os ${count} posts de uma vez? Eles serão agendados nos horários marcados.`)) return;
     setBusy(true);
-    await fetch('/api/posts/approve-all', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    await fetch('/api/posts/approve-all', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => null);
     setBusy(false);
     router.refresh();
   }

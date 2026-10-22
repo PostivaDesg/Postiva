@@ -29,8 +29,8 @@ export default function Conta() {
 
   return (
     <div className="pilha" style={{maxWidth: 480}}>
-      <h1 style={{ margin: 0 }}>Minha conta</h1>
-      <form onSubmit={trocar} className="card" style={{ display: 'grid', gap: 14 }}>
+      <header className="cabecalho"><div><h1>Minha conta</h1></div></header>
+      <form onSubmit={trocar} className="painel" style={{ display: 'grid', gap: 14 }}>
         <h2 style={{ margin: 0 }}>Trocar senha</h2>
         <div><label htmlFor="a">Nova senha</label><input id="a" type="password" autoComplete="new-password" value={a} onChange={(e) => setA(e.target.value)} /></div>
         <div><label htmlFor="b">Repita a nova senha</label><input id="b" type="password" autoComplete="new-password" value={b} onChange={(e) => setB(e.target.value)} /></div>

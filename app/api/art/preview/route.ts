@@ -8,9 +8,11 @@ import { variantTheme } from '@/lib/art/theme';
 import { logoDataUrl, assetDataUrl } from '@/lib/art/assets';
 import { BRAND } from '@/lib/brand-config';
 import { searchStock, SAMPLE_POSTS } from '@/lib/art/stock';
+import { remoteToDataUrl } from '@/lib/art/image-bytes';
 import { toSegment } from '@/lib/dates';
 
 export const runtime = 'nodejs';
+export const maxDuration = 30; // baixar logo e foto + desenhar a arte
 
 export async function GET(req: Request) {
   const u = new URL(req.url);
@@ -33,7 +35,11 @@ export async function GET(req: Request) {
   let photo: string | null = null;
   {
     const found = await searchStock(sample.query, 8);
-    photo = found[n % Math.max(1, found.length)]?.url ?? null;
+    // baixa aqui (com tempo-limite e conferindo o formato) para a prévia nunca quebrar por causa da foto
+    for (const h of [found[n % Math.max(1, found.length)], ...found].filter(Boolean).slice(0, 3)) {
+      photo = await remoteToDataUrl(h.thumb ?? h.url);
+      if (photo) break;
+    }
     if (!photo && !isDate && photos?.length) photo = await assetDataUrl(photos[n % photos.length]);
   }
   return renderArt({

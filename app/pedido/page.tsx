@@ -1,5 +1,6 @@
 'use client';
 // Pedido rápido do cliente.
+import { readJSON } from '@/lib/client-fetch';
 import { useState } from 'react';
 import Link from 'next/link';
 
@@ -14,18 +15,17 @@ export default function Pedido() {
   async function enviar(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true); setMsg(null);
-    const r = await fetch('/api/pedidos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ topic, kind, day }) });
-    const j = await r.json(); setBusy(false);
-    if (!r.ok) return setMsg(j.error);
+    const r = await fetch('/api/pedidos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ topic, kind, day }) }).catch(() => null);
+    const j = r ? await readJSON(r) : { error: 'Sem conexão com o servidor. Tente de novo.' }; setBusy(false);
+    if (!r?.ok) return setMsg(j.error);
     setTopic('');
     setMsg('Pedido recebido! A equipe revisa e ele aparece no seu painel para aprovar.');
   }
 
   return (
     <div className="pilha" style={{maxWidth: 640}}>
-      <h1 style={{ margin: 0 }}>Pedido rápido</h1>
-      <p className="muted" style={{ margin: 0 }}>Precisa de um post fora do calendário? Descreva aqui. Ele usa a cota do seu plano.</p>
-      <form onSubmit={enviar} className="card" style={{ display: 'grid', gap: 14 }}>
+      <header className="cabecalho"><div><h1>Pedido rápido</h1><p>Precisa de um post fora do calendário? Descreva aqui. Ele usa a cota do seu plano.</p></div></header>
+      <form onSubmit={enviar} className="painel" style={{ display: 'grid', gap: 14 }}>
         <div><label htmlFor="topic">Sobre o que é o post?</label>
           <textarea id="topic" rows={4} maxLength={1000} required value={topic} onChange={(e) => setTopic(e.target.value)}
             placeholder="Ex.: chegou o protetor solar X, avisar que temos delivery no feriado, vaga de emprego…" /></div>

@@ -1,5 +1,6 @@
 'use client';
 // Cadastro de empresa nova pelo gestor.
+import { readJSON } from '@/lib/client-fetch';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -21,19 +22,18 @@ export default function NovaEmpresa() {
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true); setMsg(null);
-    const r = await fetch('/api/gestor/companies', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(v) });
-    const j = await r.json();
+    const r = await fetch('/api/gestor/companies', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(v) }).catch(() => null);
+    const j = r ? await readJSON(r) : { error: 'Sem conexão com o servidor. Tente de novo.' };
     setBusy(false);
-    if (!r.ok) return setMsg(j.error);
+    if (!r?.ok) return setMsg(j.error);
     if (j.warnings?.length) alert(`Empresa criada, com avisos:\n\n- ${j.warnings.join('\n- ')}`);
     router.push(`/gestor/${j.companyId}`);
   }
 
   return (
     <div className="pilha" style={{maxWidth: 720}}>
-      <h1 style={{ margin: 0 }}>Nova empresa</h1>
-      <p className="muted" style={{ margin: 0 }}>O perfil do Claude já começa com o modelo do segmento. O cliente completa o resto em "Minha marca".</p>
-      <form onSubmit={salvar} className="card" style={{ display: 'grid', gap: 14 }}>
+      <header className="cabecalho"><div><h1>Nova empresa</h1><p>O perfil do Claude já começa com o modelo do segmento. O cliente completa o resto em "Minha marca".</p></div></header>
+      <form onSubmit={salvar} className="painel" style={{ display: 'grid', gap: 14 }}>
         {FIELDS.map(([k, label, type]) => (
           <div key={k}><label htmlFor={k}>{label}</label>
             <input id={k} type={type ?? 'text'} required={['name', 'clientEmail', 'clientName', 'cpfCnpj', 'tempPassword'].includes(k)}

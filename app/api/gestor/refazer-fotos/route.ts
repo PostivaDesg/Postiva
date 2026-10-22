@@ -31,17 +31,16 @@ export async function POST(req: Request) {
   await Promise.all(missing.map((p) => db.from('posts').update({ art_photo: p.art_photo, art_product: p.art_product }).eq('id', p.id)));
 
   // o Claude olha as candidatas e escolhe a foto de cada post (ou pede outra busca)
-  const picked = await pickWithVision(company, posts.map((p) => ({
+  let updated = 0, withPhoto = 0;
+  await pickWithVision(company, posts.map((p) => ({
     id: p.id, kind: p.kind, layout: p.layout ?? 'foto-faixa', date_label: p.date_label,
     headline: p.art_headline ?? '', caption: p.caption, art_photo: p.art_photo, art_product: p.art_product,
-  })));
-  let updated = 0, withPhoto = 0;
-  await Promise.all(posts.map(async (p, i) => {
-    const x = picked[i];
-    if (!x.asset_id && !x.stock_photo_url) return; // nada melhor: mantém como está
+  })), async (i, x) => {
+    // grava na hora: se a Vercel cortar por tempo, o que já foi escolhido fica salvo
+    if (!x.asset_id && !x.stock_photo_url) return;
     withPhoto++;
-    const { error } = await db.from('posts').update({ layout: x.layout, asset_id: x.asset_id, stock_photo_url: x.stock_photo_url, art_version: (p.art_version ?? 1) + 1 }).eq('id', p.id);
+    const { error } = await db.from('posts').update({ layout: x.layout, asset_id: x.asset_id, stock_photo_url: x.stock_photo_url, art_version: (posts[i].art_version ?? 1) + 1 }).eq('id', posts[i].id);
     if (!error) updated++;
-  }));
+  });
   return NextResponse.json({ updated, withPhoto });
 }

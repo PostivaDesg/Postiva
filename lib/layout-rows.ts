@@ -73,10 +73,14 @@ export async function planPhotos(company: Company, items: PlanIn[]) {
 export async function withLayouts<T extends GeneratedPiece>(
   company: Company,
   pieces: T[],
+  opts: { photos?: boolean } = {},
 ) {
   const layouts = await assignLayouts(company.id, company.art_style,
     pieces.map((p) => ({ kind: p.kind, date_label: p.date_label, day: p.day })), company.template_spec?.layouts);
-  const plan = await planPhotos(company, pieces.map((p, i) => ({
+  // photos:false = a foto é escolhida depois, com o olho do Claude (botão do gestor); aqui só o layout
+  const plan = opts.photos === false
+    ? layouts.map((l) => ({ layout: l.layout, brief: l.brief, asset_id: null as string | null, stock_photo_url: null as string | null }))
+    : await planPhotos(company, pieces.map((p, i) => ({
     kind: p.kind, art_photo: p.art_photo, art_product: p.art_product, date_label: p.date_label,
     hasProductPhoto: !!(p as any).hasProductPhoto, layout: layouts[i].layout, brief: layouts[i].brief, isDate: layouts[i].isDate,
   })));
