@@ -3,6 +3,7 @@
 // Custo: ~1 a 2 mil tokens por post (miniaturas pequenas), alguns centavos por semana.
 import { anthropic, MODEL } from '../claude';
 import { photoLessons } from '../learning';
+import { imageMime } from './image-bytes';
 import { supabaseAdmin } from '../supabase';
 import { photosBySubject } from './assets';
 import { allowed, bannedWords, braveImages, productImages, relevant, runLimited, saveCopy, searchStock, stockEnabled, productSearchEnabled, type Hit } from './stock';
@@ -27,7 +28,21 @@ const TEXT_ONLY = ['tipografico', 'cartao-central', 'citacao', 'lista-numerada']
 
 /** Claude olha as candidatas e escolhe. Devolve o índice (0 = nenhuma serve) e, se nenhuma servir, uma busca melhor. */
 async function judge(segment: string, p: PickIn, cands: Hit[], product: boolean, lessons = '') {
-  const content: any[] = cands.map((h) => ({ type: 'image', source: { type: 'url', url: h.thumb ?? h.url } }));
+  // baixa as miniaturas aqui e manda os bytes (o Claude não consegue abrir o link de alguns bancos de fotos;
+  // antes, quando isso falhava, ficava a primeira foto da busca, mesmo sem nada a ver)
+  const imgs = await Promise.all(cands.map(async (h) => {
+    try {
+      const r = await fetch(h.thumb ?? h.url, { signal: AbortSignal.timeout(8000) });
+      if (!r.ok) return null;
+      const b = new Uint8Array(await r.arrayBuffer());
+      const mime = b.length < 4_500_000 ? imageMime(b) : null;
+      return mime ? { type: 'image', source: { type: 'base64', media_type: mime, data: Buffer.from(b).toString('base64') } } : null;
+    } catch { return null; }
+  }));
+  const okIdx = imgs.map((x, i) => (x ? i : -1)).filter((i) => i >= 0);
+  if (!okIdx.length) return { pick: 0, hit: null as Hit | null, retry: null };
+  cands = okIdx.map((i) => cands[i]);
+  const content: any[] = okIdx.map((i) => imgs[i]);
   content.push({
     type: 'text',
     text: `Post de Instagram de ${segment}.\nTítulo: "${p.headline}"\nLegenda: "${String(p.caption ?? '').slice(0, 400)}"\n\n` +
@@ -46,9 +61,11 @@ async function judge(segment: string, p: PickIn, cands: Hit[], product: boolean,
     const res = await anthropic.messages.create({ model: MODEL, max_tokens: 300, messages: [{ role: 'user', content }] });
     const text = res.content.filter((c) => c.type === 'text').map((c) => (c as { text: string }).text).join('');
     const j = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1)) as { escolha?: number; nova_busca?: string };
-    return { pick: Math.max(0, Math.min(cands.length, Number(j.escolha) || 0)), retry: j.nova_busca ? String(j.nova_busca) : null };
-  } catch {
-    return { pick: cands.length ? 1 : 0, retry: null }; // se o olho falhar, fica a primeira (já filtrada)
+    const n = Math.max(0, Math.min(cands.length, Number(j.escolha) || 0));
+    return { pick: n, hit: n ? cands[n - 1] : null, retry: j.nova_busca ? String(j.nova_busca) : null };
+  } catch (e) {
+    console.error('[pick] o Claude não conseguiu olhar as fotos', e instanceof Error ? e.message : e);
+    return { pick: 0, hit: null, retry: null }; // sem olhar, não escolhe nada (melhor foto própria da loja do que foto sem relação)
   }
 }
 
@@ -58,7 +75,12 @@ export async function pickWithVision(company: any, posts: PickIn[], onPick?: (i:
   const reserve = RESERVE[seg] ?? RESERVE.outro;
   const banned = bannedWords(company.forbidden);
   const segName = company.segment ? String(company.segment) : 'pequena empresa';
-  const [own, lessons] = await Promise.all([photosBySubject(company.id, posts), photoLessons(company.id)]);
+  const [own, lessons, brandRows] = await Promise.all([
+    photosBySubject(company.id, posts), photoLessons(company.id),
+    supabaseAdmin().from('company_assets').select('id').eq('company_id', company.id).in('kind', ['loja', 'equipe']).then((r) => r.data ?? []),
+  ]);
+  let bi = 0;
+  const brandPhoto = () => (brandRows.length ? brandRows[bi++ % brandRows.length].id as string : null);
   const { data: used } = await supabaseAdmin().from('posts').select('stock_photo_url').eq('company_id', company.id)
     .not('stock_photo_url', 'is', null).not('id', 'in', `(${posts.map((p) => p.id).join(',') || '00000000-0000-0000-0000-000000000000'})`).limit(300);
   const seen = new Set((used ?? []).map((u) => String(u.stock_photo_url).split('/').pop()!.replace(/\.\w+$/, '')));
@@ -82,9 +104,9 @@ export async function pickWithVision(company: any, posts: PickIn[], onPick?: (i:
 
   const choose = async (i: number, cands: Hit[], product: boolean) => {
     if (!cands.length) return null;
-    const { pick, retry } = await judge(segName, posts[i], cands, product, lessons);
-    if (pick > 0) {
-      const hit = cands[pick - 1];
+    const { pick, hit: chosen, retry } = await judge(segName, posts[i], cands, product, lessons);
+    if (pick > 0 && chosen) {
+      const hit = chosen;
       seen.add(hit.key);
       // embalagem: precisa ter pelo menos 500 px (miniatura fica borrada); foto de cena pode usar a miniatura se a original bloquear
       if (product) {
@@ -97,7 +119,7 @@ export async function pickWithVision(company: any, posts: PickIn[], onPick?: (i:
       const again = fresh(await searchStock(retry, 30), retry);
       if (again.length) {
         const r2 = await judge(segName, posts[i], again, false, lessons);
-        if (r2.pick > 0) { const hit = again[r2.pick - 1]; seen.add(hit.key); return saveCopy(company.id, hit); }
+        if (r2.pick > 0 && r2.hit) { const hit = r2.hit; seen.add(hit.key); return saveCopy(company.id, hit); }
       }
     }
     return null;
@@ -118,7 +140,12 @@ export async function pickWithVision(company: any, posts: PickIn[], onPick?: (i:
     if (!stockEnabled()) return;
     const q = queryOf(p);
     const path = await choose(i, fresh(await searchStock(q, 30), q), false);
-    if (!path) return;
+    if (!path) {
+      // nenhuma foto de banco serviu: usa uma foto real da loja/equipe (nunca uma foto sem relação)
+      const b = brandPhoto();
+      if (b) await save(i, { layout: TEXT_ONLY.includes(p.layout) || p.layout === 'produto-flutuante' ? photoPool[k++ % photoPool.length] : p.layout, asset_id: b, stock_photo_url: null, bg_photo_url: null });
+      return;
+    }
     let layout = p.layout;
     if (p.date_label) { if (!NEEDS_PHOTO.includes(layout)) layout = 'data-festiva'; }
     else if (TEXT_ONLY.includes(layout) || layout === 'produto-flutuante') layout = photoPool[k++ % photoPool.length];

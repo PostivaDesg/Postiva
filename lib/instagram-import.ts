@@ -25,14 +25,17 @@ type Verdict = { usar: boolean; tipo: 'loja' | 'equipe' | 'produto' | 'outro'; n
 
 async function judgePhoto(bytes: Uint8Array, mime: string, caption: string | null): Promise<Verdict> {
   const res = await anthropic.messages.create({
-    model: MODEL, max_tokens: 250,
+    model: MODEL, max_tokens: 700,
     messages: [{ role: 'user', content: [
       { type: 'image', source: { type: 'base64', media_type: mime as 'image/jpeg' | 'image/png', data: Buffer.from(bytes).toString('base64') } },
       { type: 'text', text: `Foto do Instagram de uma farmácia/loja (legenda original: "${(caption ?? '').slice(0, 200)}").
-Ela pode servir de FOTO DE FUNDO para artes novas? Só serve se for foto real e nítida, SEM texto grande por cima, sem ser arte pronta/montagem, sem preço.
+Ela pode servir de FOTO para artes novas desta mesma loja?
+SERVE: foto real (inclusive frame de vídeo) da fachada, do balcão, das prateleiras, da equipe, de produtos na loja, mesmo com marcas nas embalagens
+e mesmo com o logo da própria Drogaria do Povão pequeno num canto.
+NÃO SERVE: arte pronta/montagem (faixa ou bloco de texto grande, título por cima), fundo de banco de imagens com texto, foto muito borrada, preço grande em destaque.
 Classifique: "loja" (fachada, balcão, prateleiras, interior), "equipe" (funcionários, atendimento), "produto" (produtos/embalagens em destaque) ou "outro".
 Para produto, "nome" é o produto em português como é vendido (ex.: "shampoo Pantene"); para os outros, uma descrição curta da cena.
-Responda SÓ com JSON: {"usar": true/false, "tipo": "...", "nome": "...", "motivo": "se não usar, por quê"}` },
+Responda SÓ com JSON: {"usar": true/false, "tipo": "...", "nome": "...", "motivo": "se não usar, por quê, em até 12 palavras"}` },
     ] }],
   });
   const text = res.content.filter((c) => c.type === 'text').map((c) => (c as { text: string }).text).join('');
