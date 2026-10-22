@@ -55,6 +55,8 @@ export async function renderPostArt(postId: string) {
   const bgPhoto = main ? bg : null;
   // regra da Postiva: arte sempre com produto ou pessoa. Layout só de texto (ou embalagem sem embalagem) → layout de foto
   let layout = p.layout ?? 'foto-faixa';
+  // divisão ao meio deixa meia arte vazia no story: vira foto cheia
+  if (layout === 'divisao-vertical' && p.kind !== 'post') layout = 'foto-cheia';
   if (photo && (!NEEDS_PHOTO.includes(layout) || (layout === 'produto-flutuante' && !main))) layout = p.date_label ? 'data-festiva' : 'foto-faixa';
 
   return renderArt({

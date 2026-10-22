@@ -19,7 +19,7 @@ const RESERVE: Record<string, { loja: string; equipe: string; geral: string[] }>
   outro: { loja: 'small shop interior', equipe: 'team smiling', geral: ['happy customer', 'small business', 'people smiling'] },
 };
 const TEXT_ONLY = ['tipografico', 'cartao-central', 'citacao', 'lista-numerada'];
-const PHOTO_DEFAULT = ['foto-faixa', 'foto-cheia', 'diagonal', 'divisao-vertical', 'moldura'];
+const PHOTO_DEFAULT = ['foto-faixa', 'foto-cheia', 'diagonal', 'moldura'];
 
 type PlanIn = { kind: string; art_photo?: string | null; art_product?: string | null; date_label?: string | null; hasProductPhoto?: boolean; layout: string; brief: string; isDate: boolean };
 

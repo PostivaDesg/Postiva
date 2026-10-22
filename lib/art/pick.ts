@@ -34,7 +34,10 @@ async function judge(segment: string, p: PickIn, cands: Hit[], product: boolean,
       `As ${cands.length} imagens acima são candidatas à foto da arte (numeradas de 1 a ${cands.length}, na ordem).\n` +
       (product
         ? 'O post fala de um produto: a foto boa mostra a EMBALAGEM do produto, nítida, inteira, sem marca d\'água, sem montagem feia e sem texto de outra loja por cima.\n'
-        : 'A foto boa mostra claramente o assunto da legenda (o produto, a pessoa ou a cena), é bonita, profissional, sem marca d\'água e sem nada que não combine com uma farmácia/loja séria.\n') +
+        : 'A foto boa mostra claramente o assunto da legenda (o produto, a pessoa usando o produto ou a cena), é bonita, profissional, sem marca d\'água e combina com o ramo da empresa.\n' +
+          'Seja exigente: se nenhuma mostra CLARAMENTE o assunto, responda 0 e sugira uma busca melhor. Paisagem (céu, lua, praia, deserto, estrada), ' +
+          'caminhão, pessoa triste ou irritada, pose de moda ou de maquiagem quando o assunto é outro, objeto aleatório: sempre 0. ' +
+          'Post sobre horário, loja aberta, entrega ou atendimento só aceita foto de balcão/interior de loja do ramo, atendente sorrindo ou entregador de moto com bag.\n') +
       (lessons ? lessons + '\n' : '') +
       'Nunca escolha: bebida alcoólica, bar, cigarro, foto escura, borrada, sem relação, com texto grande ou com logotipo de outra empresa.\n' +
       'Responda SÓ com JSON: {"escolha": número da melhor (0 se nenhuma serve), "nova_busca": "se 0, uma busca melhor em inglês de 2 a 5 palavras"}',
@@ -61,7 +64,7 @@ export async function pickWithVision(company: any, posts: PickIn[], onPick?: (i:
   const seen = new Set((used ?? []).map((u) => String(u.stock_photo_url).split('/').pop()!.replace(/\.\w+$/, '')));
 
   const specPhoto = (company.template_spec?.layouts ?? []).filter((l: string) => NEEDS_PHOTO.includes(l) && !['produto-flutuante', 'faixa-preco'].includes(l));
-  const photoPool = specPhoto.length ? specPhoto : ['foto-faixa', 'foto-cheia', 'diagonal', 'divisao-vertical'];
+  const photoPool = specPhoto.length ? specPhoto : ['foto-faixa', 'foto-cheia', 'diagonal'];
   let k = 0;
   const out: PickOut[] = posts.map((p) => ({ layout: p.layout, asset_id: null, stock_photo_url: null, bg_photo_url: null }));
 

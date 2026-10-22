@@ -82,6 +82,9 @@ Texto DENTRO da arte (a arte é gerada automaticamente com o modelo da marca):
   art_photo é OBRIGATÓRIO em TODA peça, nunca null: arte de cor lisa sem foto não é aceita. Dica, lista ou recado também têm foto da situação
   (ex.: "beba água" → "woman drinking water"; "pedido pelo WhatsApp" → "woman smartphone smiling"; Novembro Azul → "man doctor blue ribbon").
   Se a peça for sobre a própria loja ou a equipe, use exatamente "loja" ou "equipe" (a foto real da empresa entra no lugar).
+  Peça sobre horário, loja aberta, plantão, entrega ou atendimento: "loja" ou "equipe" se a empresa tiver fotos próprias; senão uma cena do ramo
+  (farmácia: "pharmacist smiling pharmacy counter", "pharmacy shelves customer", "delivery motorcycle courier bag"). Nunca paisagem, céu, lua, praia,
+  pôr do sol, caminhão ou estrada só porque o texto fala de noite, sábado ou entrega.
 - art_product: quando a peça falar de UM produto. Se o contexto trouxer "Fotos de produtos da loja" e o produto estiver lá, use o nome EXATO
   da lista. Senão, escreva o produto como ele é vendido (tipo + apresentação, ex.: "vitamina C efervescente 1g", "protetor solar facial FPS 50"),
   para a foto real da embalagem ser buscada. Nunca medicamento de tarja vermelha ou preta. Nunca preço. Peça sem produto: null.
@@ -322,7 +325,7 @@ export async function photoQueries(items: { headline: string; caption?: string |
       content: `Para cada post de Instagram de ${items[0].segment ?? 'uma empresa'} abaixo, leia o título E a legenda e diga:
 - "q": a busca de foto de banco EM INGLÊS (2 a 5 palavras) que mostra exatamente o produto, a pessoa ou a cena de que a legenda fala;
 - "p": se a legenda fala de UM tipo de produto vendido na loja, o produto em português como é vendido (ex.: "protetor solar facial FPS 50"); senão null.
-Sem marcas, sem texto, sem bebida alcoólica, sem remédio de tarja.\n${lessons ? lessons + '\n' : ''}${list}\n\nResponda SÓ com um array JSON de objetos {"n": número do post, "q": "busca", "p": "produto ou null"}, um para cada post.`,
+Sem marcas, sem texto, sem bebida alcoólica, sem remédio de tarja. Post de horário, loja aberta ou entrega: cena de balcão/interior de loja do ramo, atendente sorrindo ou entregador de moto com bag; nunca paisagem, céu, lua, praia ou caminhão.\n${lessons ? lessons + '\n' : ''}${list}\n\nResponda SÓ com um array JSON de objetos {"n": número do post, "q": "busca", "p": "produto ou null"}, um para cada post.`,
     }],
   });
   const text = res.content.filter((c) => c.type === 'text').map((c) => (c as { text: string }).text).join('');
