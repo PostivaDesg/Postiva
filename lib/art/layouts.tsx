@@ -208,19 +208,23 @@ const LAYOUTS: Record<string, L> = {
       <Logo t={t} logo={a.logo} name={a.brandName} /><Credit t={t} text={a.credit} />
     </Frame>); },
 
-  'produto-flutuante': (a, W, H) => { const t = a.theme; return (
-    <Frame t={t} W={W} H={H} bg={t.palette.bg}>
-      <Accent t={t} W={W} H={H} />
-      <div style={{ position: 'absolute', left: P(a), right: P(a), top: P(a) + 90, bottom: P(a), ...col(30, { alignItems: 'center', justifyContent: 'space-between' }) }}>
-        <div style={{ display: 'flex', width: W * 0.62, height: W * 0.62, borderRadius: W, background: t.palette.primary, opacity: 0.12, position: 'absolute', top: 40 }} />
-        <img src={a.photo ?? undefined} style={{ width: W * 0.6, height: H * (a.format === 'story' ? 0.36 : 0.42), objectFit: 'contain', display: a.photo ? 'flex' : 'none' }} />
-        <div style={col(18, { alignItems: 'center' })}>
-          <Headline t={t} text={a.headline} size={fit(a.headline, 76, 40)} color={t.palette.ink} align="center" />
-          {a.priceTo ? <PriceTag t={{ ...t, headlineAlign: 'center' }} from={a.priceFrom} to={a.priceTo} big={100} /> : <Body t={t} text={a.sub} color={t.palette.ink} align="center" />}
-          <Small t={t} text={a.validity} color={t.palette.ink} />
-        </div>
+  // Produto (embalagem): foto grande num cartão branco sobre a cor da marca, texto embaixo
+  'produto-flutuante': (a, W, H) => { const t = a.theme; const story = a.format === 'story';
+    const cardH = H * (story ? 0.5 : 0.55); return (
+    <Frame t={{ ...t, frame: 'none' }} W={W} H={H} bg={t.palette.primary}>
+      <div style={{ position: 'absolute', left: -W * 0.25, top: -W * 0.35, width: W * 1.1, height: W * 1.1, borderRadius: W, background: t.palette.secondary, opacity: 0.18, display: 'flex' }} />
+      <div style={{ position: 'absolute', left: 70, right: 70, top: story ? 260 : 190, height: cardH, background: '#FFFFFF', borderRadius: 40,
+        boxShadow: '0 30px 60px rgba(0,0,0,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40 }}>
+        {a.photo && <img src={a.photo} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />}
       </div>
-      <Logo t={t} logo={a.logo} name={a.brandName} /><Credit t={t} text={a.credit} />
+      <div style={{ position: 'absolute', left: 70, right: 70, bottom: story ? 230 : 90, ...col(18, { alignItems: 'center' }) }}>
+        <Headline t={{ ...t, textBox: 'none' }} text={a.headline} size={fit(a.headline, 76, 42)} color={t.onPrimary} align="center" />
+        {a.priceTo ? <PriceTag t={{ ...t, headlineAlign: 'center' }} from={a.priceFrom} to={a.priceTo} big={92} />
+          : <Body t={t} text={a.sub} size={40} color={t.onPrimary} align="center" />}
+        <Small t={t} text={a.validity} color={t.onPrimary} />
+        {!a.priceTo && a.cta && <Cta t={{ ...t, headlineAlign: 'center' }} text={a.cta} />}
+      </div>
+      <Logo t={t} logo={a.logo} name={a.brandName} light pos="top-left" /><Credit t={t} text={a.credit} light />
     </Frame>); },
 
   'faixa-preco': (a, W, H) => { const t = a.theme; const story = a.format === 'story'; const ph = H * (story ? 0.6 : 0.56); return (

@@ -40,7 +40,14 @@ export default function GenerateWeek({ companyId, drafts }: {
         <div><label htmlFor="extra">Contexto da semana (opcional)</label><input id="extra" placeholder="Ex.: Dia das Crianças, promoção X" value={extra} onChange={(e) => setExtra(e.target.value)} /></div>
       </div>
       <button className="btn" style={{ justifySelf: 'start' }}
-        onClick={() => post('/api/gestor/generate-week', { companyId, weekStart: week, extraContext: extra }, (j) => `${j.created} peças criadas como rascunho.`)}>
+        onClick={async () => {
+          setStatus('Escrevendo as peças com o Claude… (2 a 3 minutos)');
+          const r = await fetch('/api/gestor/generate-week', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ companyId, weekStart: week, extraContext: extra }) });
+          const j = await r.json();
+          if (!r.ok) { setStatus(j.error); return; }
+          // em seguida, o Claude olha e escolhe a foto de cada peça nova (outra chamada: cabe no tempo da Vercel)
+          await post('/api/gestor/refazer-fotos', { companyId, postIds: j.ids }, (f) => `${j.created} peças criadas como rascunho, ${f.withPhoto} com foto escolhida.`);
+        }}>
         Gerar com o Claude
       </button>
       {status && <p role="status" style={{ margin: 0 }}>{status}</p>}

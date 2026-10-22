@@ -4,7 +4,7 @@ import type { PostKind } from './plans';
 export const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // Sonnet 5.5 para legendas e roteiros. Para baratear stories simples, troque por 'claude-haiku-5-5'.
-const MODEL = process.env.CLAUDE_MODEL ?? 'claude-sonnet-5-5';
+export const MODEL = process.env.CLAUDE_MODEL ?? 'claude-sonnet-5-5';
 
 /**
  * Escrever legendas não exige raciocínio longo. Desligar o raciocínio antecipado e usar esforço médio

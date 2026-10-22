@@ -2,7 +2,7 @@
 // sem mudar os textos (útil depois de enviar fotos de produto ou de ligar um banco de fotos).
 import { NextResponse } from 'next/server';
 import { currentProfile, supabaseAdmin } from '@/lib/supabase';
-import { planPhotos } from '@/lib/layout-rows';
+import { pickWithVision } from '@/lib/art/pick';
 import { photoQueries } from '@/lib/claude';
 
 export const maxDuration = 300;
@@ -10,12 +10,14 @@ export const maxDuration = 300;
 export async function POST(req: Request) {
   const me = await currentProfile();
   if (me?.role !== 'gestor') return NextResponse.json({ error: 'Só o gestor.' }, { status: 403 });
-  const { companyId } = await req.json() as { companyId: string };
+  const { companyId, postIds } = await req.json() as { companyId: string; postIds?: string[] };
   const db = supabaseAdmin();
   const { data: company } = await db.from('companies').select('*').eq('id', companyId).single();
   if (!company) return NextResponse.json({ error: 'Empresa não encontrada.' }, { status: 404 });
-  const { data: posts } = await db.from('posts').select('id, kind, layout, art_photo, art_product, date_label, promo_item_ids, art_version, art_headline, caption')
-    .eq('company_id', companyId).eq('status', 'rascunho').order('scheduled_at').limit(120);
+  let q = db.from('posts').select('id, kind, layout, art_photo, art_product, date_label, promo_item_ids, art_version, art_headline, caption')
+    .eq('company_id', companyId).eq('status', 'rascunho');
+  if (postIds?.length) q = q.in('id', postIds);
+  const { data: posts } = await q.order('scheduled_at').limit(120);
   if (!posts?.length) return NextResponse.json({ updated: 0 });
 
   // o Claude revê o tema de foto de cada rascunho pelo título e pela legenda (mantém "loja"/"equipe" quando há foto própria)
@@ -28,17 +30,18 @@ export async function POST(req: Request) {
   });
   await Promise.all(missing.map((p) => db.from('posts').update({ art_photo: p.art_photo, art_product: p.art_product }).eq('id', p.id)));
 
-  const plan = await planPhotos(company, posts.map((p) => ({
-    kind: p.kind, art_photo: p.art_photo, art_product: p.art_product, date_label: p.date_label,
-    hasProductPhoto: !!p.promo_item_ids?.length, layout: p.layout ?? 'foto-faixa', brief: '', isDate: !!p.date_label,
+  // o Claude olha as candidatas e escolhe a foto de cada post (ou pede outra busca)
+  const picked = await pickWithVision(company, posts.map((p) => ({
+    id: p.id, kind: p.kind, layout: p.layout ?? 'foto-faixa', date_label: p.date_label,
+    headline: p.art_headline ?? '', caption: p.caption, art_photo: p.art_photo, art_product: p.art_product,
   })));
-  let updated = 0;
-  for (let i = 0; i < posts.length; i++) {
-    const x = plan[i];
-    const { error } = await db.from('posts').update({
-      layout: x.layout, asset_id: x.asset_id, stock_photo_url: x.stock_photo_url, art_version: (posts[i].art_version ?? 1) + 1,
-    }).eq('id', posts[i].id);
+  let updated = 0, withPhoto = 0;
+  await Promise.all(posts.map(async (p, i) => {
+    const x = picked[i];
+    if (!x.asset_id && !x.stock_photo_url) return; // nada melhor: mantém como está
+    withPhoto++;
+    const { error } = await db.from('posts').update({ layout: x.layout, asset_id: x.asset_id, stock_photo_url: x.stock_photo_url, art_version: (p.art_version ?? 1) + 1 }).eq('id', p.id);
     if (!error) updated++;
-  }
-  return NextResponse.json({ updated, withPhoto: plan.filter((x) => x.asset_id || x.stock_photo_url).length });
+  }));
+  return NextResponse.json({ updated, withPhoto });
 }

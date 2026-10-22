@@ -36,7 +36,7 @@ export async function prepareWeek(companyId: string, weekStart: string, extraCon
   // Cota da semana menos o que já existe nela (promoções e pedidos rápidos incluídos)
   const quota = weeklyQuota(PLANS[company.plan as PlanId]);
   const weekEnd = new Date(Date.parse(weekStart) + 7 * 864e5).toISOString().slice(0, 10);
-  const { data: existing } = await db.from('posts').select('kind')
+  const { data: existing } = await db.from('posts').select('kind, scheduled_at, title')
     .eq('company_id', companyId).gte('scheduled_at', `${weekStart}T00:00:00-03:00`).lt('scheduled_at', `${weekEnd}T00:00:00-03:00`);
   for (const p of existing ?? []) quota[p.kind as PostKind] = Math.max(0, quota[p.kind as PostKind] - 1);
   if (quota.story + quota.post + quota.reels === 0) throw new WeekError('A cota desta semana já foi usada.', 409);
@@ -45,9 +45,12 @@ export async function prepareWeek(companyId: string, weekStart: string, extraCon
   const products = await productPhotoNames(companyId);
   const productsCtx = products.length ? `Fotos de produtos da loja (use o nome exato em art_product; sem preço): ${products.join('; ')}` : '';
   const learned = await learningContext(companyId);
-  const context = [datesContext(weekStart, lastDay, company.segment, company.city), productsCtx, learned, extraContext].filter(Boolean).join('\n');
+  // Semana já começada (ex.: depois de descartar algumas): o Claude completa só o que falta, sem repetir tema
+  const have = (existing ?? []).map((p) => `${String(p.scheduled_at).slice(0, 16).replace('T', ' ')} ${p.kind}: ${p.title}`);
+  const haveCtx = have.length ? `Esta semana JÁ TEM estas peças (complete só o que falta, em dias e horários livres, com temas diferentes destes):\n${have.join('\n')}` : '';
+  const context = [datesContext(weekStart, lastDay, company.segment, company.city), productsCtx, learned, haveCtx, extraContext].filter(Boolean).join('\n');
   const opts = { brand: buildBrand(company, brand), weekStart, quota, extraContext: context || undefined };
-  return { company, quota, opts, params: weekParams(opts) };
+  return { company, quota, opts, params: weekParams(opts), refill: have.length > 0 };
 }
 
 export async function saveWeek(company: any, quota: Record<PostKind, number>, pieces: GeneratedPiece[], usage: Record<string, unknown>) {
@@ -64,14 +67,20 @@ export async function saveWeek(company: any, quota: Record<PostKind, number>, pi
       ...artColumns(l), status: 'rascunho', tracking_code: newTrackingCode(),
     };
   });
-  if (rows.length) await db.from('posts').insert(rows);
+  const { data: ins } = rows.length ? await db.from('posts').insert(rows).select('id') : { data: [] as { id: string }[] };
   await db.from('ai_usage').insert({ company_id: company.id, ...usage });
-  return rows.length;
+  return (ins ?? []).map((r) => r.id as string);
 }
 
 /** Geração imediata (botão do gestor). */
 export async function generateWeekFor(companyId: string, weekStart: string, extraContext?: string) {
-  const { company, quota, opts } = await prepareWeek(companyId, weekStart, extraContext);
+  const { company, quota, opts, refill } = await prepareWeek(companyId, weekStart, extraContext);
+  if (refill || quota.story + quota.post + quota.reels <= 20) {
+    // completar a semana: poucas peças, um pedido só (o Claude vê os dias livres)
+    const one = await generateWeek(opts);
+    const ids = await saveWeek(company, quota, one.pieces, one.usage);
+    return { created: ids.length, ids, companyName: company.name as string };
+  }
   // Na hora (plano grátis da Vercel corta em 5 min): a semana vai em 2 pedidos ao mesmo tempo, dias 1–4 e 5–7.
   const day = (n: number) => new Date(Date.parse(weekStart) + n * 864e5).toISOString().slice(0, 10);
   const split = (q: number, share: number) => Math.round(q * share);
@@ -87,5 +96,6 @@ export async function generateWeekFor(companyId: string, weekStart: string, extr
   const usage = parts.map((p) => p.usage).filter(Boolean).reduce((a, u) => ({
     ...a, input_tokens: a.input_tokens + u.input_tokens, output_tokens: a.output_tokens + u.output_tokens, cache_read_tokens: a.cache_read_tokens + u.cache_read_tokens,
   }));
-  return { created: await saveWeek(company, quota, pieces, usage), companyName: company.name as string };
+  const ids = await saveWeek(company, quota, pieces, usage);
+  return { created: ids.length, ids, companyName: company.name as string };
 }

@@ -54,7 +54,7 @@ export async function collectBatches() {
         const { pieces, usage } = parseWeek(r.result.message as any);
         // lote custa metade: registra o uso pela metade para a margem ficar certa
         const half = { ...usage, input_tokens: Math.round(usage.input_tokens / 2), output_tokens: Math.round(usage.output_tokens / 2) };
-        const n = await saveWeek(company, item.quota as any, pieces, half);
+        const n = (await saveWeek(company, item.quota as any, pieces, half)).length;
         done.push(`${company.name} (${n})`);
       } catch (e) {
         failed.push(`${company.name}: ${(e as Error).message}`);

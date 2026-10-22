@@ -5,7 +5,7 @@
 // Sem nenhuma das chaves, nada muda: o site usa só as fotos da empresa e os layouts de texto.
 import { supabaseAdmin } from '../supabase';
 
-type Hit = { key: string; url: string; tags?: string }; // key: "pixabay-123" / "pexels-456" (para não repetir)
+export type Hit = { key: string; url: string; tags?: string; thumb?: string }; // key: "pixabay-123" / "pexels-456" (para não repetir)
 
 // Nunca entra em arte nenhuma (as fotos de banco vêm com etiquetas; a foto é descartada se tiver uma destas)
 const BANNED = ['alcohol', 'alcoholic', 'beer', 'wine', 'whisky', 'whiskey', 'vodka', 'liquor', 'cocktail', 'bar', 'pub', 'drunk',
@@ -20,14 +20,14 @@ export function bannedWords(extra?: string | null) {
 const STOP = new Set(['with', 'and', 'the', 'for', 'from', 'on', 'in', 'of', 'at', 'a', 'an', 'to', 'person', 'people', 'woman', 'man', 'hand', 'hands', 'holding', 'using', 'happy', 'smiling', 'home', 'care', 'product', 'products', 'photo', 'image', 'background']);
 const stem = (w: string) => w.replace(/(ies)$/, 'y').replace(/(es|s)$/, '');
 /** A foto tem nas etiquetas alguma palavra-chave do tema? (sem etiquetas, aceita) */
-function relevant(h: Hit, query: string) {
+export function relevant(h: Hit, query: string) {
   if (!h.tags) return true;
   const keys = query.toLowerCase().split(/[^a-z]+/).filter((w) => w.length > 2 && !STOP.has(w)).map(stem);
   if (!keys.length) return true;
   const tags = h.tags.toLowerCase().split(/[^a-z]+/).filter(Boolean).map(stem);
   return keys.some((k) => tags.some((t) => t === k || t.startsWith(k) || k.startsWith(t) && t.length > 3));
 }
-const allowed = (h: Hit, banned: string[]) => {
+export const allowed = (h: Hit, banned: string[]) => {
   const t = ` ${(h.tags ?? '').toLowerCase().replace(/[^a-z0-9à-ú]+/g, ' ')} `;
   return !banned.some((w) => t.includes(` ${w} `));
 };
@@ -45,7 +45,7 @@ async function pixabay(query: string, perPage: number): Promise<Hit[]> {
   const r = await fetch(u, { next: { revalidate: 86400 } }); // cache de 24h exigido pelo Pixabay
   if (!r.ok) return [];
   const j = (await r.json()) as { hits?: { id: number; largeImageURL: string; webformatURL: string; tags?: string }[] };
-  return (j.hits ?? []).map((h) => ({ key: `pixabay-${h.id}`, url: h.largeImageURL || h.webformatURL, tags: h.tags }));
+  return (j.hits ?? []).map((h) => ({ key: `pixabay-${h.id}`, url: h.largeImageURL || h.webformatURL, tags: h.tags, thumb: h.webformatURL }));
 }
 
 async function pexels(query: string, perPage: number): Promise<Hit[]> {
@@ -56,7 +56,7 @@ async function pexels(query: string, perPage: number): Promise<Hit[]> {
   const r = await fetch(u, { headers: { Authorization: process.env.PEXELS_API_KEY! }, next: { revalidate: 86400 } });
   if (!r.ok) return [];
   const j = (await r.json()) as { photos?: { id: number; alt?: string; src: { portrait: string; large: string } }[] };
-  return (j.photos ?? []).map((p) => ({ key: `pexels-${p.id}`, url: p.src.portrait || p.src.large, tags: p.alt }));
+  return (j.photos ?? []).map((p) => ({ key: `pexels-${p.id}`, url: p.src.portrait || p.src.large, tags: p.alt, thumb: p.src.portrait }));
 }
 
 /** Busca fotos para o tema (links temporários: servem para a prévia; para os posts use pickStockPhotos). */
@@ -74,12 +74,13 @@ export async function searchStock(query: string, perPage = 15): Promise<Hit[]> {
 }
 
 /** Copia a foto para o armazenamento da empresa e devolve o caminho ("banco/..."). */
-async function saveCopy(companyId: string, hit: Hit) {
+export async function saveCopy(companyId: string, hit: Hit) {
   try {
     const r = await fetch(hit.url);
     if (!r.ok) return null;
     const type = r.headers.get('content-type') ?? 'image/jpeg';
-    if (!type.startsWith('image/')) return null;
+    // só JPG e PNG: o gerador de artes não lê WEBP/AVIF (era o "prévia não aparece")
+    if (!/image\/(jpe?g|png)/.test(type)) return null;
     const path = `${companyId}/banco/${hit.key}.${type.includes('png') ? 'png' : 'jpg'}`;
     const { error } = await supabaseAdmin().storage.from('marcas').upload(path, await r.arrayBuffer(), { contentType: type, upsert: true });
     return error ? null : path;
@@ -114,7 +115,7 @@ export async function pickStockPhotos(companyId: string, queries: (string | null
   return out;
 }
 
-async function runLimited<T>(items: T[], limit: number, fn: (x: T) => Promise<void>) {
+export async function runLimited<T>(items: T[], limit: number, fn: (x: T) => Promise<void>) {
   let next = 0;
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => {
     while (next < items.length) { const it = items[next++]; await fn(it).catch(() => {}); }
@@ -126,7 +127,7 @@ async function runLimited<T>(items: T[], limit: number, fn: (x: T) => Promise<vo
 // grátis mensal. Usado só quando a peça fala de um produto e a empresa não enviou a foto dele.
 export const productSearchEnabled = () => !!process.env.BRAVE_API_KEY;
 
-async function braveImages(query: string): Promise<Hit[]> {
+export async function braveImages(query: string): Promise<Hit[]> {
   const u = new URL('https://api.search.brave.com/res/v1/images/search');
   u.searchParams.set('q', query.slice(0, 120));
   u.searchParams.set('country', 'BR');
@@ -142,8 +143,8 @@ async function braveImages(query: string): Promise<Hit[]> {
     const w = it.properties?.width ?? 0, h = it.properties?.height ?? 0;
     if (!src || (w && w < 400) || (h && h < 400)) continue;
     const key = 'web-' + [...src].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7).toString(36);
-    out.push({ key, url: src, tags: it.title });
-    if (it.thumbnail?.src) out.push({ key: key + 't', url: it.thumbnail.src, tags: it.title }); // se a original bloquear, a miniatura serve
+    out.push({ key, url: src, tags: it.title, thumb: it.thumbnail?.src ?? src });
+    if (it.thumbnail?.src) out.push({ key: key + 't', url: it.thumbnail.src, tags: it.title, thumb: it.thumbnail.src }); // se a original bloquear, a miniatura serve
   }
   return out;
 }
