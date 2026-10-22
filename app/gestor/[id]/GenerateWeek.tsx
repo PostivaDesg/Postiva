@@ -57,6 +57,25 @@ export default function GenerateWeek({ companyId, drafts }: {
     return pending.length ? ` ${ok} artes feitas no Canva${semModelo ? `, ${semModelo} sem modelo do Canva para o formato (ficam com a arte do site)` : ''}${fail ? `, ${fail} com falha (${lastErr})` : ''}.` : ' Artes do Canva já estão em dia.';
   }
 
+  // fotos + artes do Canva + reels em segundo plano (continua mesmo com a página fechada)
+  const [prog, setProg] = useState<{ total: number; prontas: number } | null>(null);
+  async function emSegundoPlano(body: object, prefix = '') {
+    const r = await fetch('/api/gestor/artes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ companyId, ...body }) }).catch(() => null);
+    if (!r?.ok) { setStatus(prefix + 'Não consegui começar a tarefa. Tente de novo.'); return; }
+    setStatus(prefix + 'Fotos e artes sendo feitas em segundo plano. Pode fechar esta página: elas vão aparecendo na revisão.');
+    acompanhar();
+  }
+  function acompanhar() {
+    let n = 0;
+    const tick = async () => {
+      const r = await fetch(`/api/gestor/artes?companyId=${companyId}`).catch(() => null);
+      if (r?.ok) setProg(await readJSON(r));
+      if (++n < 90) setTimeout(tick, 10000); // acompanha por até 15 minutos
+      router.refresh();
+    };
+    setTimeout(tick, 8000);
+  }
+
   return (
     <section className="painel pilha" style={{ gap: 14 }}>
       <div className="painel-titulo" style={{ marginBottom: 0 }}>
@@ -74,35 +93,23 @@ export default function GenerateWeek({ companyId, drafts }: {
           if (!r) { setStatus('Sem conexão com o servidor. Tente de novo.'); return; }
           const j = await readJSON(r);
           if (!r.ok) { setStatus(j.error); return; }
-          // em seguida, o Claude olha e escolhe a foto de cada peça nova (outra chamada: cabe no tempo da Vercel)
-          setStatus(`${j.created} peças escritas. Escolhendo as fotos…`);
-          const f = await fetch('/api/gestor/refazer-fotos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ companyId, postIds: j.ids }) }).catch(() => null);
-          const fj = f ? await readJSON(f) : {};
-          const base = `${j.created} peças criadas como rascunho, ${fj.withPhoto ?? 0} com foto escolhida.`;
-          const canvaMsg = await artesCanva({ postIds: j.ids }, base + ' ');
-          const reels = await montarReels({ postIds: j.ids }, base + canvaMsg + ' ');
-          setStatus(base + canvaMsg + reels);
+          // fotos, artes do Canva e vídeos dos reels seguem em segundo plano
+          await emSegundoPlano({ postIds: j.ids, fotos: true }, `${j.created} peças escritas. `);
         }}>
         Gerar com o Claude
       </button>
       {status && <p role="status" style={{ margin: 0 }}>{status}</p>}
+      {prog && prog.total > 0 && <p className="muted" style={{ margin: 0 }}>Artes do Canva prontas: {prog.prontas} de {prog.total}.</p>}
 
       {drafts.length > 0 && <p className="muted" style={{ margin: 0 }}>{drafts.length} {drafts.length === 1 ? 'rascunho' : 'rascunhos'} desta empresa esperando revisão.</p>}
       {(
         <button className="btn ghost" style={{ justifySelf: 'start' }}
-          onClick={async () => {
-            setStatus('Escolhendo as fotos de novo… (pode levar alguns minutos)');
-            const r = await fetch('/api/gestor/refazer-fotos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ companyId }) }).catch(() => null);
-            const j = r ? await readJSON(r) : { error: 'Sem conexão com o servidor.' };
-            if (!r?.ok) { setStatus(j.error ?? 'Passou do tempo: toque de novo para continuar de onde parou.'); return; }
-            const base = `Fotos refeitas em ${j.updated} peças.`;
-            setStatus(base + (await artesCanva({}, base + ' ')));
-          }}>
+          onClick={() => emSegundoPlano({ fotos: true })}>
           Refazer fotos (rascunhos e não aprovados)
         </button>
       )}
       <button className="btn ghost" style={{ justifySelf: 'start' }}
-        onClick={async () => { setStatus('Procurando artes para fazer no Canva…'); setStatus((await artesCanva({})) || 'Esta empresa ainda não tem modelos do Canva ou o Canva não está conectado (veja o Diagnóstico).'); }}>
+        onClick={() => emSegundoPlano({ fotos: false })}>
         Gerar artes no Canva
       </button>
       {drafts.some((d) => d.kind === 'reels') && (

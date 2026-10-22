@@ -14,6 +14,7 @@ const nextConfig = {
     '/api/posts/[id]/change': reel,
     '/api/posts/approve-all': reel,
     '/api/cron/alertas': reel,
+    '/api/jobs/artes': reel,
   },
 };
 export default nextConfig;
