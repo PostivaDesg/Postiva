@@ -29,7 +29,7 @@ export const SIZE = { post: { w: 1080, h: 1350 }, story: { w: 1080, h: 1920 } };
 const pad = (t: Theme) => (t.density === 'airy' ? 96 : t.density === 'bold' ? 56 : 72);
 const cased = (t: Theme, s: string) => (t.headlineCase === 'upper' ? s.toUpperCase() : s);
 /** Tamanho do título pelo comprimento do texto, para nunca estourar a arte. */
-const fit = (text: string, base: number, min = 44) => Math.max(min, Math.round(base * Math.min(1, Math.sqrt(18 / Math.max(6, text.length)))));
+const fit = (text: string, base: number, min = 48) => Math.max(min, Math.round(base * 1.3 * Math.min(1, Math.sqrt(16 / Math.max(6, text.length)))));
 
 function Headline({ t, text, size, color, align }: { t: Theme; text: string; size: number; color: string; align?: 'left' | 'center' }) {
   const a = align ?? t.headlineAlign;
@@ -43,7 +43,7 @@ function Headline({ t, text, size, color, align }: { t: Theme; text: string; siz
   return <div style={base}>{cased(t, text)}</div>;
 }
 
-function Body({ t, text, size = 40, color, align }: { t: Theme; text?: string | null; size?: number; color: string; align?: 'left' | 'center' }) {
+function Body({ t, text, size = 46, color, align }: { t: Theme; text?: string | null; size?: number; color: string; align?: 'left' | 'center' }) {
   if (!text) return null;
   const a = align ?? t.headlineAlign;
   return <div style={{ display: 'flex', fontFamily: t.body, fontSize: size, lineHeight: 1.3, color, textAlign: a, justifyContent: a === 'center' ? 'center' : 'flex-start' }}>{text}</div>;
@@ -54,7 +54,7 @@ function Cta({ t, text, invert }: { t: Theme; text?: string | null; invert?: boo
   const bg = invert ? t.onPrimary : t.palette.secondary;
   return (
     <div style={{ display: 'flex', alignSelf: t.headlineAlign === 'center' ? 'center' : 'flex-start', background: bg, color: invert ? t.palette.primary : t.onSecondary,
-      fontFamily: t.body, fontWeight: 700, fontSize: 34, padding: '18px 34px', borderRadius: Math.max(8, Math.min(t.radius, 60)) }}>{text}</div>
+      fontFamily: t.body, fontWeight: 700, fontSize: 40, padding: '20px 40px', borderRadius: Math.max(8, Math.min(t.radius, 60)) }}>{text}</div>
   );
 }
 
@@ -66,8 +66,8 @@ function Logo({ t, logo, name, light, pos }: { t: Theme; logo?: string | null; n
   return (
     <div style={place}>
       {logo
-        ? <img src={logo} style={{ height: 96, maxWidth: 360, objectFit: 'contain' }} />
-        : <div style={{ display: 'flex', fontFamily: t.display, fontWeight: 700, fontSize: 40, color: light ? '#FFFFFF' : t.palette.primary }}>{name}</div>}
+        ? <img src={logo} style={{ height: 140, maxWidth: 420, objectFit: 'contain' }} />
+        : <div style={{ display: 'flex', fontFamily: t.display, fontWeight: 700, fontSize: 48, color: light ? '#FFFFFF' : t.palette.primary }}>{name}</div>}
     </div>
   );
 }
@@ -131,7 +131,7 @@ function PriceTag({ t, from, to, big = 120 }: { t: Theme; from?: string | null; 
 }
 
 const Small = ({ t, text, color }: { t: Theme; text?: string | null; color: string }) =>
-  text ? <div style={{ display: 'flex', fontFamily: t.body, fontSize: 26, color, opacity: 0.85 }}>{text}</div> : null;
+  text ? <div style={{ display: 'flex', fontFamily: t.body, fontSize: 32, color, opacity: 0.9 }}>{text}</div> : null;
 
 // ---------- layouts ----------
 type L = (a: ArtInput, W: number, H: number) => ReactElement;
@@ -166,9 +166,9 @@ const LAYOUTS: Record<string, L> = {
   'cartao-central': (a, W, H) => { const t = a.theme; return (
     <Frame t={t} W={W} H={H} bg={t.palette.primary}>
       <Accent t={t} W={W} H={H} onDark />
-      <div style={{ position: 'absolute', left: 80, right: 80, top: H * 0.16, bottom: H * 0.16, background: t.palette.bg, borderRadius: Math.max(t.radius, 16), padding: 64, ...col(28, { justifyContent: 'center', alignItems: t.headlineAlign === 'center' ? 'center' : 'flex-start' }) }}>
-        {a.photo && <Photo t={t} src={a.photo} w={W - 160 - 128} h={H * 0.28} />}
-        <Headline t={t} text={a.headline} size={fit(a.headline, 92)} color={t.palette.ink} />
+      <div style={{ position: 'absolute', left: 80, right: 80, top: a.photo ? H * 0.15 : H * 0.18, bottom: a.photo ? H * 0.09 : H * 0.16, background: t.palette.bg, borderRadius: Math.max(t.radius, 16), padding: a.photo ? 48 : 64, overflow: 'hidden', ...col(a.photo ? 22 : 28, { justifyContent: 'center', alignItems: t.headlineAlign === 'center' ? 'center' : 'flex-start' }) }}>
+        {a.photo && <Photo t={t} src={a.photo} w={W - 160 - 96} h={H * (a.format === 'story' ? 0.3 : 0.27)} />}
+        <Headline t={t} text={a.headline} size={fit(a.headline, a.photo ? 70 : 92, 40)} color={t.palette.ink} />
         <Body t={t} text={a.sub} color={t.palette.ink} /><Cta t={t} text={a.cta} />
       </div>
       <Logo t={t} logo={a.logo} name={a.brandName} light /><Credit t={t} text={a.credit} light />
@@ -231,7 +231,7 @@ const LAYOUTS: Record<string, L> = {
       <div style={{ position: 'absolute', left: m, right: m, top: m, height: H * 0.6, display: 'flex' }}><Photo t={t} src={a.photo} w={W - 2 * m} h={H * 0.6} shape="full" fallback={a.brandName} /></div>
       <div style={{ position: 'absolute', left: m, right: m, top: H * 0.6 + m + 40, bottom: m, ...col(18) }}>
         <Headline t={t} text={a.headline} size={fit(a.headline, 84, 40)} color={t.onPrimary} />
-        <Body t={t} text={a.sub} size={36} color={t.onPrimary} />
+        <Body t={t} text={a.sub} size={42} color={t.onPrimary} />
       </div>
       <Logo t={t} logo={a.logo} name={a.brandName} light pos="bottom-right" /><Credit t={t} text={a.credit} light />
     </Frame>); },
@@ -242,7 +242,7 @@ const LAYOUTS: Record<string, L> = {
       <div style={{ position: 'absolute', left: -W * 0.2, top: H * 0.52, width: W * 1.4, height: H * 0.3, background: t.palette.primary, transform: 'rotate(-8deg)', display: 'flex' }} />
       <div style={{ position: 'absolute', left: P(a), right: P(a), top: H * 0.56, ...col(14) }}>
         <Headline t={t} text={a.headline} size={fit(a.headline, 96)} color={t.onPrimary} />
-        <Body t={t} text={a.sub} size={36} color={t.onPrimary} />
+        <Body t={t} text={a.sub} size={42} color={t.onPrimary} />
       </div>
       <Logo t={t} logo={a.logo} name={a.brandName} light /><Credit t={t} text={a.credit} light />
     </Frame>); },
@@ -269,8 +269,8 @@ const LAYOUTS: Record<string, L> = {
       <Accent t={t} W={W} H={H} onDark />
       <div style={{ position: 'absolute', left: P(a), right: P(a), top: 0, bottom: 0, ...col(28, { justifyContent: 'center' }) }}>
         <div style={{ display: 'flex', fontFamily: 'Playfair Display', fontSize: 240, lineHeight: 0.6, color: t.palette.secondary }}>“</div>
-        <Headline t={{ ...t, textBox: 'none' }} text={a.headline} size={fit(a.headline, 86, 44)} color={t.onPrimary} />
-        <Body t={t} text={a.sub} size={34} color={t.onPrimary} />
+        <Headline t={{ ...t, textBox: 'none' }} text={a.headline} size={fit(a.headline, 100, 48)} color={t.onPrimary} />
+        <Body t={t} text={a.sub} size={42} color={t.onPrimary} />
       </div>
       <Logo t={t} logo={a.logo} name={a.brandName} light pos="bottom-left" /><Credit t={t} text={a.credit} light />
     </Frame>); },
@@ -327,7 +327,7 @@ const DATE_LAYOUTS: Record<string, L> = {
       <div style={{ position: 'absolute', left: 50, right: 50, top: 50, bottom: 50, border: `16px solid ${t.palette.primary}`, borderRadius: Math.max(24, t.radius), display: 'flex' }} />
       <div style={{ position: 'absolute', left: 90, right: 90, top: 90, bottom: 90, border: `3px dashed ${t.palette.primary}`, borderRadius: Math.max(16, t.radius - 10), ...col(26, { justifyContent: 'center', alignItems: 'center', padding: 70 }) }}>
         {a.logo
-          ? <img src={a.logo} style={{ height: 90, maxWidth: 320, objectFit: 'contain', marginBottom: 30 }} />
+          ? <img src={a.logo} style={{ height: 150, maxWidth: 440, objectFit: 'contain', marginBottom: 30 }} />
           : <div style={{ display: 'flex', fontFamily: t.display, fontSize: 38, fontWeight: 700, color: t.palette.primary, marginBottom: 30 }}>{a.brandName}</div>}
         <Small t={t} text={a.dateLabel} color={t.onSecondary} />
         <Headline t={{ ...t, textBox: 'none' }} text={a.headline} size={fit(a.headline, 100)} color={t.onSecondary} align="center" />
@@ -361,7 +361,8 @@ export function renderLayout(a: ArtInput) {
   // segurança: layout com foto sem foto disponível → um layout só de texto (variado, não sempre o mesmo)
   if (!a.photo && NEEDS_PHOTO.includes(layout)) {
     const pool = a.dateLabel ? DATE_TEXT_ONLY : TEXT_ONLY;
-    const hash = [...a.headline].reduce((s, c) => (s * 31 + c.charCodeAt(0)) >>> 0, 7);
+    // o próprio layout entra na conta: layouts diferentes com o mesmo texto não caem todos no mesmo substituto
+    const hash = [...`${layout}|${a.headline}`].reduce((s, c) => (s * 31 + c.charCodeAt(0)) >>> 0, 7);
     layout = pool[hash % pool.length];
   }
   const fn = LAYOUT_RENDERERS[layout] ?? (a.dateLabel ? DATE_LAYOUTS['data-tipografica'] : LAYOUTS['tipografico']);

@@ -37,6 +37,7 @@ export interface GeneratedPiece {
   art_sub?: string | null;    // texto de apoio (até 16 palavras)
   art_cta?: string | null;    // botão (até 4 palavras), ex.: "Chame no WhatsApp"
   art_items?: string[] | null; // 3 itens curtos quando a arte é uma lista
+  art_photo?: string | null;   // busca da foto de banco gratuito, em inglês (ex.: "woman headache office")
 }
 
 /** Instruções fixas da Postiva Design, iguais para todas as empresas. */
@@ -59,6 +60,9 @@ Texto DENTRO da arte (a arte é gerada automaticamente com o modelo da marca):
 - art_sub: até 16 palavras, opcional. art_cta: até 4 palavras, opcional.
 - art_items: 3 itens curtos só quando a peça for uma lista ou passo a passo.
 - Sem preço inventado: preço só aparece se vier da promoção informada.
+- art_photo: a foto da arte, como busca curta EM INGLÊS para um banco de fotos (2 a 5 palavras), ex.: "colorful fruit smoothies", "woman headache office", "mother baby bath".
+  Fotos reais e com vida (pessoas, ambientes, alimentos, objetos do tema), combinando com o assunto da peça. Nunca peça logotipos, marcas,
+  caixas de remédio, texto escrito ou celebridades. Use null quando a peça for só tipográfica (lista, frase, recado).
 Se o briefing trouxer hashtags fixas da marca, use-as no final da legenda dos posts no feed.
 
 Datas comemorativas e feriados: são peças próprias e exclusivas desta marca, com mensagem afetiva ligada ao que a empresa faz (sem preço, a não ser que haja promoção informada). Marque essas peças com "date_label" igual ao nome da data.`;
@@ -102,7 +106,7 @@ Melhores horários da conta: ${opts.bestTimes ?? 'stories 09:00, 13:00 e 18:00; 
 ${opts.extraContext ? `Contexto da semana: ${opts.extraContext}` : ''}
 
 Responda SÓ com um array JSON, sem texto antes ou depois, neste formato:
-[{"kind":"story|post|reels","day":"AAAA-MM-DD","time":"HH:MM","title":"...","caption":"...","art_brief":"...","reason":"...","art_headline":"...","art_sub":null,"art_cta":null,"art_items":null,"date_label":null}]
+[{"kind":"story|post|reels","day":"AAAA-MM-DD","time":"HH:MM","title":"...","caption":"...","art_brief":"...","reason":"...","art_headline":"...","art_sub":null,"art_cta":null,"art_items":null,"art_photo":"...","date_label":null}]
 (Em peça de data comemorativa ou feriado, "date_label" é o nome da data, ex.: "Dia das Crianças".)
 Seja objetivo no art_brief (1 ou 2 frases): a arte é gerada automaticamente.`;
   return {
@@ -185,7 +189,7 @@ export async function generateQuick(brand: BrandProfile, req: { topic: string; k
       content: `O cliente pediu 1 ${req.kind} para ${req.day} sobre: "${req.topic}".
 ${req.extra ?? ''}
 Se o pedido citar preço, promoção ou dado que não esteja no briefing, use exatamente o que o cliente escreveu; se faltar algo essencial, deixe entre [colchetes].
-Responda SÓ com um objeto JSON: {"kind":"${req.kind}","day":"${req.day}","time":"HH:MM","title":"...","caption":"...","art_brief":"...","reason":"...","art_headline":"...","art_sub":null,"art_cta":null,"art_items":null}`,
+Responda SÓ com um objeto JSON: {"kind":"${req.kind}","day":"${req.day}","time":"HH:MM","title":"...","caption":"...","art_brief":"...","reason":"...","art_headline":"...","art_sub":null,"art_cta":null,"art_items":null,"art_photo":"..."}`,
     }],
   });
   const text = res.content.filter((c) => c.type === 'text').map((c) => (c as { text: string }).text).join('');

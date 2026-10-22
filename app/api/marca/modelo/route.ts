@@ -9,8 +9,10 @@ import { previewUrl } from '@/lib/art/url';
 export const maxDuration = 120;
 const MAX_PER_DAY = 5; // versões por dia por empresa (cada uma é uma chamada ao Claude)
 
-function previews(companyId: string, spec: any) {
-  const rev = createHash('sha1').update(JSON.stringify(spec)).digest('hex').slice(0, 10);
+async function previews(companyId: string, spec: any) {
+  // a prévia muda quando muda o modelo, as fotos/logo enviados ou a liberação das fotos de banco
+  const { count } = await supabaseAdmin().from('company_assets').select('id', { count: 'exact', head: true }).eq('company_id', companyId);
+  const rev = createHash('sha1').update(`${JSON.stringify(spec)}|${count ?? 0}|${process.env.PEXELS_API_KEY ? 's' : ''}|2`).digest('hex').slice(0, 10);
   const layouts = [...(spec?.layouts ?? []).slice(0, 4), 'data-tipografica', 'data-moldura'];
   return layouts.map((l: string) => ({ layout: l, url: previewUrl(companyId, l, rev) }));
 }
@@ -21,7 +23,7 @@ export async function GET(req: Request) {
   const cid = resolveCompany(me, new URL(req.url).searchParams.get('companyId'));
   if (!cid) return NextResponse.json({ error: 'Empresa não informada.' }, { status: 400 });
   const { data: c } = await supabaseAdmin().from('companies').select('template_spec, template_status').eq('id', cid).single();
-  return NextResponse.json({ status: c?.template_status ?? 'pendente', notes: c?.template_spec?.notes ?? null, previews: c?.template_spec ? previews(cid, c.template_spec) : [] });
+  return NextResponse.json({ status: c?.template_status ?? 'pendente', notes: c?.template_spec?.notes ?? null, previews: c?.template_spec ? await previews(cid, c.template_spec) : [] });
 }
 
 export async function POST(req: Request) {
@@ -48,7 +50,7 @@ export async function POST(req: Request) {
 
   try {
     const spec = await designTemplate(cid, b.feedback?.slice(0, 500));
-    return NextResponse.json({ status: 'aguardando', notes: spec.notes, previews: previews(cid, spec) });
+    return NextResponse.json({ status: 'aguardando', notes: spec.notes, previews: await previews(cid, spec) });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }

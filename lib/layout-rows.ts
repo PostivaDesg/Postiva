@@ -3,6 +3,7 @@
 import { assignLayouts, CREDIT_TEXT, LAYOUTS as LAYOUT_TEXT, DATE_LAYOUTS as DATE_LAYOUT_TEXT } from './styles';
 import { pickPhotos } from './art/assets';
 import { NEEDS_PHOTO } from './art/layouts';
+import { pickStockPhotos } from './art/stock';
 import type { GeneratedPiece } from './claude';
 
 export async function withLayouts<T extends GeneratedPiece>(
@@ -12,12 +13,15 @@ export async function withLayouts<T extends GeneratedPiece>(
   const layouts = await assignLayouts(company.id, company.art_style,
     pieces.map((p) => ({ kind: p.kind, date_label: p.date_label, day: p.day })), company.template_spec?.layouts);
   const photos = await pickPhotos(company.id, layouts.map((l) => l.layout));
+  // Sem foto própria: foto de banco gratuito com o tema que o Claude sugeriu (art_photo)
+  const stock = await pickStockPhotos(company.id, layouts.map((l, i) =>
+    !photos[i] && NEEDS_PHOTO.includes(l.layout) && !(pieces[i] as any).hasProductPhoto ? pieces[i].art_photo : null));
   // Empresa sem fotos (ou sem foto que sirva): troca layouts de foto por layouts de texto, em rodízio
   const textPool = ['tipografico', 'cartao-central', 'citacao', 'lista-numerada'];
   const dateTextPool = ['data-tipografica', 'data-ilustrada', 'data-minimalista', 'data-moldura', 'data-carta'];
   let t = 0;
   for (let i = 0; i < layouts.length; i++) {
-    if (!photos[i] && NEEDS_PHOTO.includes(layouts[i].layout) && !(pieces[i] as any).hasProductPhoto) {
+    if (!photos[i] && !stock[i] && NEEDS_PHOTO.includes(layouts[i].layout) && !(pieces[i] as any).hasProductPhoto) {
       const pool = layouts[i].isDate ? dateTextPool : textPool;
       const next = pool[t++ % pool.length];
       layouts[i] = { ...layouts[i], layout: next, brief: layouts[i].brief.replace(/^[^;]*/, (LAYOUT_TEXT as Record<string, string>)[next] ?? (DATE_LAYOUT_TEXT as Record<string, string>)[next] ?? next) };
@@ -32,6 +36,8 @@ export async function withLayouts<T extends GeneratedPiece>(
       date_label: p.date_label ?? null,
       credit,
       asset_id: photos[i],
+      stock_photo_url: photos[i] ? null : stock[i],
+      art_photo: p.art_photo?.slice(0, 80) ?? null,
       art_headline: (p.art_headline ?? p.title ?? '').slice(0, 90),
       art_sub: p.art_sub?.slice(0, 160) ?? null,
       art_cta: p.art_cta?.slice(0, 40) ?? null,
@@ -47,6 +53,6 @@ export async function withLayouts<T extends GeneratedPiece>(
 
 /** Colunas da arte para gravar no post. */
 export const artColumns = (l: Awaited<ReturnType<typeof withLayouts>>[number]) => ({
-  layout: l.layout, date_label: l.date_label, credit: l.credit, asset_id: l.asset_id,
+  layout: l.layout, date_label: l.date_label, credit: l.credit, asset_id: l.asset_id, stock_photo_url: l.stock_photo_url, art_photo: l.art_photo,
   art_headline: l.art_headline, art_sub: l.art_sub, art_cta: l.art_cta, art_items: l.art_items, art_brief: l.art_brief,
 });

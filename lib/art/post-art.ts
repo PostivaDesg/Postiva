@@ -26,7 +26,7 @@ export async function renderPostArt(postId: string) {
     const { data } = await db.from('promo_items').select('*').eq('id', p.promo_item_ids[0]).single();
     promo = data;
   }
-  const photo = promo?.photo_url ?? (await assetDataUrl(await assetById(p.asset_id)));
+  const photo = promo?.photo_url ?? (await assetDataUrl(await assetById(p.asset_id))) ?? p.stock_photo_url ?? null;
 
   return renderArt({
     layout: p.layout ?? 'tipografico',

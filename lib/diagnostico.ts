@@ -62,6 +62,7 @@ export async function runChecks(): Promise<Check[]> {
     return !!t.access_token;
   });
   add('Fotos (Google Drive)', 'Conta de serviço', driveOk, false, 'Crie a conta de serviço no Google Cloud, ative a Drive API e cole a chave JSON. Sem isso, o cliente envia as fotos pelo painel.');
+  add('Fotos (Pexels)', 'Fotos de banco gratuitas (PEXELS_API_KEY)', has('PEXELS_API_KEY'), false, 'Crie a chave grátis em pexels.com/api. Sem isso, empresa sem foto própria recebe só artes de texto.');
   add('Promoções (Cosmos)', 'Token do Cosmos (planilha com EAN)', has('COSMOS_TOKEN'), false, 'Cadastre-se em cosmos.bluesoft.com.br e copie o token. Sem isso, só o modo "puxar do site" funciona.');
 
   // Avisos

@@ -5,6 +5,7 @@ import { PLANS, type PlanId } from '@/lib/plans';
 import { revisePiece } from '@/lib/claude';
 import { buildBrand } from '@/lib/brand';
 import { pickPhotos } from '@/lib/art/assets';
+import { pickStockPhotos } from '@/lib/art/stock';
 
 export const maxDuration = 120;
 
@@ -35,9 +36,19 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       kind: post.kind, day: post.scheduled_at.slice(0, 10), time: post.scheduled_at.slice(11, 16),
       title: post.title, caption: post.caption, art_brief: post.art_brief, reason: post.reason ?? '',
       art_headline: post.art_headline ?? post.title, art_sub: post.art_sub, art_cta: post.art_cta, art_items: post.art_items,
+      art_photo: post.art_photo ?? null,
     },
     note,
   );
+
+  // "trocar a foto" (ou um tema novo de foto): próxima foto própria do rodízio ou outra foto de banco
+  const wantsPhoto = /foto|imagem/i.test(note) || (piece.art_photo && piece.art_photo !== post.art_photo);
+  let photoPatch: Record<string, unknown> = {};
+  if (wantsPhoto) {
+    const own = (await pickPhotos(post.company_id, [post.layout ?? 'foto-cheia']))[0];
+    const stock = own ? null : (await pickStockPhotos(post.company_id, [piece.art_photo ?? post.art_photo]))[0];
+    photoPatch = { asset_id: own, stock_photo_url: stock ?? post.stock_photo_url };
+  }
 
   await db.from('posts').update({
     title: piece.title, caption: piece.caption, art_brief: piece.art_brief, reason: piece.reason,
@@ -46,8 +57,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     art_items: Array.isArray(piece.art_items) ? piece.art_items.slice(0, 4) : post.art_items,
     status: 'aguardando', change_requests: post.change_requests + 1,
     art_version: (post.art_version ?? 1) + 1, // a imagem é gerada de novo com o texto novo
-    // "trocar a foto": usa a próxima foto do rodízio
-    ...(/foto|imagem/i.test(note) ? { asset_id: (await pickPhotos(post.company_id, [post.layout ?? 'foto-cheia']))[0] } : {}),
+    art_photo: piece.art_photo ?? post.art_photo ?? null,
+    ...photoPatch,
   }).eq('id', id);
   await db.from('ai_usage').insert({ company_id: post.company_id, ...usage });
 
