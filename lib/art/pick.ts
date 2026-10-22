@@ -55,12 +55,14 @@ async function judge(segment: string, p: PickIn, cands: Hit[], product: boolean,
           'Post sobre horário, loja aberta, entrega ou atendimento só aceita foto de balcão/interior de loja do ramo, atendente sorrindo ou entregador de moto com bag.\n') +
       (lessons ? lessons + '\n' : '') +
       'Nunca escolha: bebida alcoólica, bar, cigarro, foto escura, borrada, sem relação, com texto grande ou com logotipo de outra empresa.\n' +
-      'Responda SÓ com JSON: {"escolha": número da melhor (0 se nenhuma serve), "nova_busca": "se 0, uma busca melhor em inglês de 2 a 5 palavras"}',
+      'Sua resposta inteira é UM objeto JSON, sem nenhum texto antes ou depois: {"escolha": número da melhor (0 se nenhuma serve), "nova_busca": "se 0, uma busca melhor em inglês de 2 a 5 palavras"}',
   });
   try {
-    const res = await anthropic.messages.create({ model: MODEL, max_tokens: 300, messages: [{ role: 'user', content }] });
+    const res = await anthropic.messages.create({ model: MODEL, max_tokens: 1500, messages: [{ role: 'user', content }] });
     const text = res.content.filter((c) => c.type === 'text').map((c) => (c as { text: string }).text).join('');
-    const j = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1)) as { escolha?: number; nova_busca?: string };
+    const m = text.match(/\{[^{}]*"escolha"[^{}]*\}/);
+    if (!m) throw new Error(`resposta sem JSON: ${text.slice(0, 200)}`);
+    const j = JSON.parse(m[0]) as { escolha?: number; nova_busca?: string };
     const n = Math.max(0, Math.min(cands.length, Number(j.escolha) || 0));
     return { pick: n, hit: n ? cands[n - 1] : null, retry: j.nova_busca ? String(j.nova_busca) : null };
   } catch (e) {
