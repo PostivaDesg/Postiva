@@ -63,7 +63,11 @@ async function accessToken(failed?: string) {
     // outra instância já está renovando: espera e lê o token novo
     const lock = get('canva_refresh_lock');
     if (lock && Date.now() - Date.parse(lock.updated_at) < 20_000) { await new Promise((r) => setTimeout(r, 1500)); continue; }
-    await db.from('app_settings').upsert({ key: 'canva_refresh_lock', value: String(Date.now()), updated_at: new Date().toISOString() });
+    if (lock) await db.from('app_settings').delete().eq('key', 'canva_refresh_lock').eq('updated_at', lock.updated_at); // trava esquecida
+    // trava atômica: só UMA instância consegue inserir a linha; as outras esperam o token novo
+    // (usar o mesmo refresh token duas vezes faz o Canva derrubar a conexão inteira)
+    const { error: lockErr } = await db.from('app_settings').insert({ key: 'canva_refresh_lock', value: String(Date.now()), updated_at: new Date().toISOString() });
+    if (lockErr) { await new Promise((r) => setTimeout(r, 1500)); continue; }
     try {
       const refresh = (await setting('canva_refresh_token')) ?? process.env.CANVA_REFRESH_TOKEN;
       if (!refresh) throw new Error('Canva não conectado: toque em "Conectar Canva" no Diagnóstico.');
