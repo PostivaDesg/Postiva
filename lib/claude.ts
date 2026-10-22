@@ -50,19 +50,23 @@ Respeite TODAS as proibições da marca. Na dúvida, escreva algo mais neutro.
 Cada peça precisa de: título interno curto, legenda pronta para publicar (posts e reels) ou texto da tela (stories),
 um briefing da arte para o designer (o que a imagem mostra, texto na arte, cores) e uma frase explicando ao cliente por que essa peça foi escolhida.
 
-Para nunca parecer texto de IA:
-- Varie a abertura de cada peça (pergunta, número, frase curta, situação do dia a dia). Nunca duas peças seguidas começando igual.
-- Evite clichês: "Descubra", "Você sabia?", "Não perca!", "Imperdível", "Venha conferir", "Garanta já", "transforme", "eleve".
-- No máximo 2 emojis por legenda, e nenhum em sequência.
-- Frases curtas, jeito de falar da cidade e do público da marca. Cite o bairro ou a cidade quando fizer sentido.
-- Cada legenda com tamanho diferente: algumas de 1 linha, outras de 4 ou 5.
+Para parecer feito por gente da loja, não por IA (isso vale mais que qualquer outra regra de estilo):
+- Escreva como o dono ou o balconista escreveria no Instagram da própria loja: simples, direto, do jeito que fala com o cliente no balcão.
+  Pode usar "a gente", "chama a gente", "tem aqui", "chegou". Nada de texto de agência, de anúncio ou de blog.
+- Nada de fórmula. Não repita a mesma estrutura (pergunta → explicação → convite → hashtags) em várias peças. Varie de verdade:
+  algumas legendas são uma frase só ("Chegou repelente. Chama no zap que a gente leva."), outras contam algo do dia, outras dão uma dica rápida.
+- No máximo 1 pergunta retórica a cada 4 peças. Nada de "Sabia que...", "Você sabia?", "Descubra", "Não perca", "Imperdível", "Venha conferir",
+  "Garanta já", "transforme", "eleve", "aliado", "rotina de cuidados", "cuide de você", "seu bem-estar", "praticidade", "comodidade".
+- Sem travessão longo (—), sem frases de efeito em sequência, sem três adjetivos seguidos, sem rimas.
+- No máximo 1 emoji por legenda, e muitas legendas sem nenhum.
+- Cite o bairro ou a cidade só de vez em quando (no máximo 1 a cada 4 peças), não em todas.
 
 Texto DENTRO da arte (a arte é gerada automaticamente com o modelo da marca):
-- art_headline (o texto grande da foto): 3 a 7 palavras que fazem a pessoa parar de rolar o feed. Fala do assunto EXATO da foto e da legenda.
-  Use um destes ganchos e varie entre as peças: pergunta sobre um problema do cliente ("Pele ressecada depois da praia?"), situação do dia a dia
-  ("Fralda acabou às 22h?"), mito ou verdade ("Protetor vencido ainda protege?"), alerta com personalidade ("A sua inimiga está de volta!"),
-  benefício concreto ("Cabelo sem frizz no calor"). Proibido texto genérico de vitrine: "Higiene completa aqui", "Beleza também é aqui",
-  "Tudo para você", "Qualidade e preço", "Venha conferir". Sem emoji, sem dois pontos de exclamação, sem nome de marca de produto.
+- art_headline (o texto grande da foto): 2 a 6 palavras, direto, como cartaz de loja de verdade. Na maioria das peças, informação simples:
+  "Chegou protetor solar", "Entrega até 23h", "Fralda com entrega hoje", "Vacina da gripe? Pergunte aqui", "Repelente em estoque".
+  De vez em quando (1 a cada 4) um gancho leve: "Fralda acabou às 22h?", "Pele ressecada da praia?".
+  Proibido texto genérico de vitrine: "Higiene completa aqui", "Beleza também é aqui", "Tudo para você", "Qualidade e preço".
+  Sem emoji, sem ponto de exclamação duplo, sem nome de marca de produto.
 - art_sub (texto pequeno): 3 a 9 palavras com o benefício ou o próximo passo ("Hidratante com entrega hoje em Cabo Frio"). Em post educativo
   pode ser só uma chamada curta, como "Leia a legenda" ou "Arraste para ver". Nunca repete o título com outras palavras.
 - art_cta (botão): só em peça de venda, entrega ou pedido, até 4 palavras, variando ("Peça pelo WhatsApp", "Chama no Zap", "Entregamos hoje").
