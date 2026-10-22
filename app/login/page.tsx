@@ -35,7 +35,7 @@ export default function LoginPage() {
   return (
     <main className="entrada">
       <section className="lado" aria-hidden="false">
-        <PostivaLogo size={46} invert />
+        <PostivaLogo size={54} invert />
         <div>
           <h1>Seu Instagram com design, todo dia.</h1>
           <p>Entre para aprovar os posts da semana, ver os contatos que chegaram pelo WhatsApp e pedir peças novas.</p>

@@ -51,7 +51,7 @@ export default async function AppShell({ children }: { children: ReactNode }) {
     sub = me.full_name ?? '';
   }
 
-  const marca = <Link href={me.role === 'gestor' ? '/gestor' : '/painel'} className="marca" aria-label="Postiva Design, início"><PostivaLogo size={36} invert /></Link>;
+  const marca = <Link href={me.role === 'gestor' ? '/gestor' : '/painel'} className="marca" aria-label="Postiva Design, início"><PostivaLogo size={42} invert /></Link>;
   return (
     <div className="shell">
       <aside className="sidebar">

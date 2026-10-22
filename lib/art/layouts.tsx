@@ -77,10 +77,10 @@ function Logo({ t, logo, name, light, pos }: { t: Theme; logo?: string | null; n
 export function CreditBadge({ text, size = 1 }: { text: string; size?: number }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 * size, background: 'rgba(23, 21, 59, 0.82)', borderRadius: 999, padding: `${7 * size}px ${16 * size}px ${7 * size}px ${9 * size}px` }}>
-      <svg width={20 * size} height={25 * size} viewBox="0 0 100 125">
-        <rect width="100" height="125" rx="26" fill="#FFFFFF" />
-        <path d="M38 96 V38 H56 A14 14 0 0 1 56 66 H38" fill="none" stroke="#17153B" strokeWidth="18" strokeLinecap="round" strokeLinejoin="round" />
-        <circle cx="74" cy="97" r="9" fill="#D6246E" />
+      <svg width={18 * size} height={27 * size} viewBox="0 0 100 150">
+        <rect x="5" y="5" width="90" height="140" rx="22" fill="none" stroke="#FFFFFF" strokeWidth="10" />
+        <path fillRule="evenodd" fill="#FFFFFF" d="M21 24 H56 A31 32 0 0 1 56 88 H40 V122 H21 Z M40 41 V71 H55 A14 15 0 0 0 55 41 Z" />
+        <circle cx="73" cy="121" r="12" fill="#D6246E" />
       </svg>
       <div style={{ display: 'flex', fontSize: 20 * size, color: '#FFFFFF', letterSpacing: 0.2 }}>{text}</div>
     </div>
