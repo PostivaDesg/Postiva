@@ -9,6 +9,7 @@ import type { PlanId } from '@/lib/plans';
 import { fromEan } from '@/lib/products';
 import { buildBrand } from '@/lib/brand';
 import { withLayouts, artColumns } from '@/lib/layout-rows';
+import { withFiveHashtags } from '@/lib/hashtags';
 
 export const maxDuration = 300;
 
@@ -86,7 +87,7 @@ export async function POST(req: Request) {
     const review = (p.items ?? []).some((i) => saved[i]?.needs_review);
     return {
       company_id: cid, kind: p.kind, scheduled_at: `${p.day}T${p.time}:00-03:00`,
-      title: p.title, caption: p.caption, reason: p.reason,
+      title: p.title, caption: withFiveHashtags(p.kind, p.caption, company), reason: p.reason,
       ...artColumns(l),
       status: review ? 'rascunho' : 'aguardando', // medicamento ou sem foto: gestor revisa antes
       released_at: review ? null : new Date().toISOString(),

@@ -7,6 +7,7 @@ import { buildBrand } from '@/lib/brand';
 import { newTrackingCode } from '@/lib/tracking';
 import { notifyGestor } from '@/lib/notify';
 import { withLayouts, artColumns } from '@/lib/layout-rows';
+import { withFiveHashtags } from '@/lib/hashtags';
 import type { PlanId, PostKind } from '@/lib/plans';
 
 export const maxDuration = 120;
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
   const [laid] = await withLayouts(company, [{ ...piece, kind: b.kind, day: b.day }]);
   const { data: post } = await db.from('posts').insert({
     company_id: cid, kind: b.kind, scheduled_at: `${b.day}T${piece.time ?? '12:00'}:00-03:00`,
-    title: piece.title, caption: piece.caption, reason: piece.reason,
+    title: piece.title, caption: withFiveHashtags(b.kind, piece.caption, company), reason: piece.reason,
     ...artColumns(laid),
     status: 'rascunho', quick_request: b.topic, tracking_code: newTrackingCode(),
   }).select('id').single();

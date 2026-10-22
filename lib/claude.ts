@@ -57,8 +57,15 @@ Para nunca parecer texto de IA:
 - Cada legenda com tamanho diferente: algumas de 1 linha, outras de 4 ou 5.
 
 Texto DENTRO da arte (a arte é gerada automaticamente com o modelo da marca):
-- art_headline: até 8 palavras, forte e legível no celular. Nunca repita a legenda inteira.
-- art_sub: até 16 palavras, opcional. art_cta: até 4 palavras, opcional.
+- art_headline (o texto grande da foto): 3 a 7 palavras que fazem a pessoa parar de rolar o feed. Fala do assunto EXATO da foto e da legenda.
+  Use um destes ganchos e varie entre as peças: pergunta sobre um problema do cliente ("Pele ressecada depois da praia?"), situação do dia a dia
+  ("Fralda acabou às 22h?"), mito ou verdade ("Protetor vencido ainda protege?"), alerta com personalidade ("A sua inimiga está de volta!"),
+  benefício concreto ("Cabelo sem frizz no calor"). Proibido texto genérico de vitrine: "Higiene completa aqui", "Beleza também é aqui",
+  "Tudo para você", "Qualidade e preço", "Venha conferir". Sem emoji, sem dois pontos de exclamação, sem nome de marca de produto.
+- art_sub (texto pequeno): 3 a 9 palavras com o benefício ou o próximo passo ("Hidratante com entrega hoje em Cabo Frio"). Em post educativo
+  pode ser só uma chamada curta, como "Leia a legenda" ou "Arraste para ver". Nunca repete o título com outras palavras.
+- art_cta (botão): só em peça de venda, entrega ou pedido, até 4 palavras, variando ("Peça pelo WhatsApp", "Chama no Zap", "Entregamos hoje").
+  Em dica, data comemorativa e bastidores: null.
 - art_items: 3 itens curtos só quando a peça for uma lista ou passo a passo.
 - Sem preço inventado: preço só aparece se vier da promoção informada.
 - art_photo: a foto da arte, como busca curta EM INGLÊS para um banco de fotos (2 a 5 palavras), ex.: "colorful fruit smoothies", "woman headache office", "mother baby bath".
@@ -74,7 +81,10 @@ Texto DENTRO da arte (a arte é gerada automaticamente com o modelo da marca):
   da lista. Senão, escreva o produto como ele é vendido (tipo + apresentação, ex.: "vitamina C efervescente 1g", "protetor solar facial FPS 50"),
   para a foto real da embalagem ser buscada. Nunca medicamento de tarja vermelha ou preta. Nunca preço. Peça sem produto: null.
   A foto, o título e a legenda falam da MESMA coisa.
-Se o briefing trouxer hashtags fixas da marca, use-as no final da legenda dos posts no feed.
+Hashtags: a legenda de TODO post e reels termina com uma linha com EXATAMENTE 5 hashtags, pertinentes a ESTA empresa e a ESTA peça:
+  2 da marca/cidade (escolha das hashtags fixas da marca, se houver; senão o nome da empresa e a cidade sem acento) + 3 do assunto da peça,
+  específicas e usadas de verdade no Brasil (ex.: #ProtetorSolar #PeleSaudavel #VeraoCaboFrio). Sem acento, sem espaço, sem hashtag genérica
+  (#love, #instagood, #tbt) e sem repetir o mesmo trio de assunto em peças diferentes. Stories não levam hashtags.
 
 Datas comemorativas e feriados: são peças próprias e exclusivas desta marca, com mensagem afetiva ligada ao que a empresa faz (sem preço, a não ser que haja promoção informada). Marque essas peças com "date_label" igual ao nome da data.`;
 

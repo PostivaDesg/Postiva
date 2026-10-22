@@ -7,6 +7,7 @@ import { buildBrand } from '@/lib/brand';
 import { photosBySubject } from '@/lib/art/assets';
 import { pickStockPhotos } from '@/lib/art/stock';
 import { recordFeedback } from '@/lib/learning';
+import { withFiveHashtags } from '@/lib/hashtags';
 
 export const maxDuration = 120;
 
@@ -53,7 +54,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   }
 
   await db.from('posts').update({
-    title: piece.title, caption: piece.caption, art_brief: piece.art_brief, reason: piece.reason,
+    title: piece.title, caption: withFiveHashtags(post.kind, piece.caption, company), art_brief: piece.art_brief, reason: piece.reason,
     art_headline: (piece.art_headline ?? post.art_headline ?? piece.title).slice(0, 90),
     art_sub: piece.art_sub ?? null, art_cta: piece.art_cta ?? null,
     art_items: Array.isArray(piece.art_items) ? piece.art_items.slice(0, 4) : post.art_items,

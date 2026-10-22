@@ -11,6 +11,7 @@ import { buildBrand } from './brand';
 import { withLayouts, artColumns } from './layout-rows';
 import { productPhotoNames } from './art/assets';
 import { learningContext } from './learning';
+import { withFiveHashtags } from './hashtags';
 
 export class WeekError extends Error {
   constructor(message: string, public status: number) { super(message); }
@@ -63,7 +64,7 @@ export async function saveWeek(company: any, quota: Record<PostKind, number>, pi
     const time = /^\d{2}:\d{2}$/.test(p.time ?? '') ? p.time : '12:00';
     return {
       company_id: company.id, kind: p.kind, scheduled_at: `${p.day}T${time}:00-03:00`,
-      title: p.title, caption: p.caption, reason: p.reason,
+      title: p.title, caption: withFiveHashtags(p.kind, p.caption, company), reason: p.reason,
       ...artColumns(l), status: 'rascunho', tracking_code: newTrackingCode(),
     };
   });
