@@ -1,4 +1,5 @@
-// Cliente pede ajuste. O Claude refaz o post e ele volta para aprovação.
+// Cliente pede para refazer (com o motivo). O Claude refaz texto e foto e devolve direto para o cliente,
+// sem passar pela revisão da equipe. O motivo vira aprendizado da empresa (lib/learning.ts).
 import { NextResponse } from 'next/server';
 import { buildReel } from '@/lib/reels';
 import { currentProfile, supabaseAdmin } from '@/lib/supabase';
@@ -8,6 +9,7 @@ import { buildBrand } from '@/lib/brand';
 import { photosBySubject } from '@/lib/art/assets';
 import { pickStockPhotos } from '@/lib/art/stock';
 import { recordFeedback } from '@/lib/learning';
+import { pickWithVision } from '@/lib/art/pick';
 import { withFiveHashtags } from '@/lib/hashtags';
 
 export const maxDuration = 300;
@@ -17,7 +19,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const { note } = await req.json() as { note: string };
   const me = await currentProfile();
   if (!me) return NextResponse.json({ error: 'Faça login.' }, { status: 401 });
-  if (!note?.trim()) return NextResponse.json({ error: 'Diga o que quer mudar.' }, { status: 400 });
+  if (!note?.trim() || note.trim().length < 4) return NextResponse.json({ error: 'Conte o que você não gostou: é assim que a IA aprende o gosto da sua empresa.' }, { status: 400 });
 
   const db = supabaseAdmin();
   const { data: post } = await db.from('posts').select('*').eq('id', id).single();
@@ -28,7 +30,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const { data: brand } = await db.from('brand_profiles').select('*').eq('company_id', post.company_id).single();
   const limit = PLANS[company.plan as PlanId].changesPerPost;
   if (post.change_requests >= limit) {
-    return NextResponse.json({ error: `Seu plano inclui ${limit} ajustes por post. Fale com a equipe.` }, { status: 409 });
+    return NextResponse.json({ error: `Seu plano inclui ${limit} refações por post. Fale com a equipe.` }, { status: 409 });
   }
 
   await db.from('posts').update({ status: 'ajuste', change_note: note }).eq('id', id);
@@ -49,9 +51,18 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const wantsPhoto = /foto|imagem/i.test(note) || (piece.art_photo && piece.art_photo !== post.art_photo);
   let photoPatch: Record<string, unknown> = {};
   if (wantsPhoto) {
-    const own = (await photosBySubject(post.company_id, [{ art_photo: piece.art_photo, art_product: piece.art_product }]))[0];
-    const stock = own ? null : (await pickStockPhotos(post.company_id, [piece.art_photo ?? post.art_photo]))[0];
-    photoPatch = { asset_id: own, stock_photo_url: stock ?? post.stock_photo_url };
+    // o Claude olha as fotos candidatas e escolhe a que combina com o texto novo
+    const [pick] = await pickWithVision(company, [{
+      id: post.id, kind: post.kind, layout: post.layout ?? 'foto-faixa', date_label: post.date_label,
+      headline: piece.art_headline ?? post.art_headline ?? piece.title, caption: piece.caption,
+      art_photo: piece.art_photo ?? post.art_photo, art_product: piece.art_product ?? post.art_product,
+    }]).catch(() => [null]);
+    if (pick?.asset_id || pick?.stock_photo_url) photoPatch = { layout: pick.layout, asset_id: pick.asset_id, stock_photo_url: pick.stock_photo_url };
+    else {
+      const own = (await photosBySubject(post.company_id, [{ art_photo: piece.art_photo, art_product: piece.art_product }]))[0];
+      const stock = own ? null : (await pickStockPhotos(post.company_id, [piece.art_photo ?? post.art_photo]))[0];
+      photoPatch = { asset_id: own, stock_photo_url: stock ?? post.stock_photo_url };
+    }
   }
 
   await db.from('posts').update({

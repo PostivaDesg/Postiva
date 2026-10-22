@@ -1,4 +1,5 @@
-// Pedido rápido: "preciso de um post sobre X amanhã". Desconta da cota e passa pela sua fila.
+// Pedido rápido / urgente: "preciso de um post sobre X hoje". Dentro da cota, a arte é gerada e entregue direto
+// para o cliente aprovar, sem passar pela revisão da equipe (a equipe só recebe um aviso).
 import { NextResponse } from 'next/server';
 import { currentProfile, supabaseAdmin } from '@/lib/supabase';
 import { resolveCompany, monthlyRemaining } from '@/lib/quota';
@@ -9,8 +10,10 @@ import { notifyGestor } from '@/lib/notify';
 import { withLayouts, artColumns } from '@/lib/layout-rows';
 import { withFiveHashtags } from '@/lib/hashtags';
 import type { PlanId, PostKind } from '@/lib/plans';
+import { pickWithVision } from '@/lib/art/pick';
+import { buildReel } from '@/lib/reels';
 
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 export async function POST(req: Request) {
   const me = await currentProfile();
@@ -42,10 +45,24 @@ export async function POST(req: Request) {
     title: piece.title, caption: withFiveHashtags(b.kind, piece.caption, company), reason: piece.reason,
     ...artColumns(laid),
     status: 'rascunho', quick_request: b.topic, tracking_code: newTrackingCode(),
-  }).select('id').single();
+  }).select('*').single();
   await db.from('ai_usage').insert({ company_id: cid, ...usage });
+  if (!post) return NextResponse.json({ error: 'Não consegui salvar o pedido. Tente de novo.' }, { status: 500 });
 
+  // foto escolhida pelo Claude olhando as candidatas (mesma qualidade da semana)
+  const [pick] = await pickWithVision(company, [{
+    id: post.id, kind: post.kind, layout: post.layout ?? 'foto-faixa', date_label: post.date_label,
+    headline: post.art_headline ?? post.title, caption: post.caption, art_photo: post.art_photo, art_product: post.art_product,
+  }]).catch(() => [null]);
+  if (pick?.asset_id || pick?.stock_photo_url) {
+    await db.from('posts').update({ layout: pick.layout, asset_id: pick.asset_id, stock_photo_url: pick.stock_photo_url, art_version: (post.art_version ?? 1) + 1 }).eq('id', post.id);
+  }
+  if (b.kind === 'reels') await buildReel(post.id).catch((e) => console.error('[reels]', e));
+
+  // pedido do cliente vai direto para ele aprovar; pedido feito pelo gestor fica como rascunho na fila dele
+  const direct = me.role !== 'gestor';
+  if (direct) await db.from('posts').update({ status: 'aguardando' }).eq('id', post.id);
   const urgent = b.day <= new Date(Date.now() - 3 * 3600e3 + 864e5).toISOString().slice(0, 10);
-  await notifyGestor(cid, 'pedido', `${urgent ? 'URGENTE · ' : ''}${company.name} pediu um ${b.kind} para ${b.day.split('-').reverse().join('/')}: "${b.topic.slice(0, 120)}"`);
-  return NextResponse.json({ ok: true, postId: post?.id });
+  await notifyGestor(cid, 'pedido', `${urgent ? 'URGENTE · ' : ''}${company.name} pediu um ${b.kind} para ${b.day.split('-').reverse().join('/')}: "${b.topic.slice(0, 120)}"${direct ? ' (já entregue ao cliente)' : ''}`);
+  return NextResponse.json({ ok: true, postId: post.id, delivered: direct });
 }
