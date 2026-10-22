@@ -104,7 +104,8 @@ export async function pickWithVision(company: any, posts: PickIn[], onPick?: (i:
   const productIdx = order.filter((i) => !own[i] && posts[i].art_product && !posts[i].date_label && productSearchEnabled());
   const restIdx = order.filter((i) => !productIdx.includes(i));
 
-  const choose = async (i: number, cands: Hit[], product: boolean) => {
+  const tries = new Map<number, number>();
+  const choose = async (i: number, cands: Hit[], product: boolean): Promise<string | null> => {
     if (!cands.length) return null;
     const { pick, hit: chosen, retry } = await judge(segName, posts[i], cands, product, lessons);
     if (pick > 0 && chosen) {
@@ -112,8 +113,14 @@ export async function pickWithVision(company: any, posts: PickIn[], onPick?: (i:
       seen.add(hit.key);
       // embalagem: precisa ter pelo menos 500 px (miniatura fica borrada); foto de cena pode usar a miniatura se a original bloquear
       if (product) {
-        for (const h of [hit, ...cands.filter((c) => c !== hit)]) { const ok = await saveCopy(company.id, h, 500); if (ok) return ok; }
-        return null;
+        // só a embalagem que o Claude escolheu (pegar outra da lista sem olhar trazia produto errado);
+        // se o site dela bloquear o download, o Claude escolhe de novo entre as que sobraram
+        const ok = await saveCopy(company.id, hit, 500);
+        if (ok) return ok;
+        const rest = cands.filter((c) => c !== hit && c.url !== hit.url);
+        const t = (tries.get(i) ?? 0) + 1;
+        tries.set(i, t);
+        return rest.length && t <= 2 ? choose(i, rest, true) : null;
       }
       return (await saveCopy(company.id, hit)) ?? (hit.thumb && hit.thumb !== hit.url ? await saveCopy(company.id, { ...hit, key: hit.key + 't', url: hit.thumb }) : null);
     }
@@ -164,13 +171,13 @@ export async function pickWithVision(company: any, posts: PickIn[], onPick?: (i:
       const shelfFirst = brandRows.length ? brandRows[bi++ % brandRows.length].storage_path as string | null : null;
       const [path, bg] = await Promise.all([choose(i, cands, true), shelfFirst ? Promise.resolve(shelfFirst) : scene(i)]);
       if (path && bg) await save(i, { layout: 'produto-flutuante', asset_id: null, stock_photo_url: path, bg_photo_url: bg });
-      else if (bg) await save(i, { layout: photoPool[k++ % photoPool.length], asset_id: null, stock_photo_url: bg, bg_photo_url: null });
+      // sem embalagem: NÃO usa a prateleira como foto do post (era o "mesma foto em tudo"); vai para foto do assunto
+      else if (!path) await stockPick(i);
       else if (path) {
         // embalagem achada mas nenhuma cena boa: a foto real da loja vai atrás da embalagem
         const shelf = brandRows.length ? brandRows[bi++ % brandRows.length].storage_path as string | null : null;
         await save(i, { layout: 'produto-flutuante', asset_id: null, stock_photo_url: path, bg_photo_url: shelf ?? null });
       }
-      else await stockPick(i);
     }),
     runLimited(restIdx, 5, stockPick),
   ]);

@@ -75,7 +75,7 @@ export async function canvaArt(postId: string) {
   const main = assetPath ?? p.stock_photo_url;
   const photoFor = { foto: hasProduct && p.bg_photo_url ? p.bg_photo_url : (p.bg_photo_url && p.layout === 'produto-flutuante' ? p.bg_photo_url : main), produto: main };
   const text: Record<string, string | null> = {
-    titulo: p.art_headline || p.title, texto: p.art_sub, cta: p.art_cta, data: p.date_label,
+    titulo: p.art_headline || p.title, texto: p.art_sub, cta: p.art_cta || (p.date_label ? 'Fale com a gente' : 'Chame no WhatsApp'), data: p.date_label,
     cidade: company?.city ?? null, whatsapp: company?.whatsapp ?? null,
   };
   for (const [name, def] of Object.entries(dataset)) {
