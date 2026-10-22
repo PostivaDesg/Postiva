@@ -3,15 +3,15 @@
 import { assignLayouts, CREDIT_TEXT, LAYOUTS as LAYOUT_TEXT, DATE_LAYOUTS as DATE_LAYOUT_TEXT } from './styles';
 import { photosBySubject } from './art/assets';
 import { NEEDS_PHOTO } from './art/layouts';
-import { pickStockPhotos, pickProductPhotos } from './art/stock';
+import { pickStockPhotos, pickProductPhotos, bannedWords } from './art/stock';
 import type { GeneratedPiece } from './claude';
 import { toSegment } from './dates';
 
-type Company = { id: string; art_style: string | null; credit_all: boolean | null; segment?: string | null; template_spec?: { layouts?: string[]; notes?: string } | null };
+type Company = { id: string; art_style: string | null; credit_all: boolean | null; segment?: string | null; forbidden?: string | null; template_spec?: { layouts?: string[]; notes?: string } | null };
 
 // Temas de reserva quando a peça não trouxe foto (ou pediu foto da loja/equipe e a empresa não tem)
 const RESERVE: Record<string, { loja: string; equipe: string; geral: string[] }> = {
-  farmacia: { loja: 'pharmacy store shelves', equipe: 'pharmacist smiling customer', geral: ['pharmacy products shelf', 'woman smiling health', 'family care home', 'delivery motorcycle'] },
+  farmacia: { loja: 'pharmacist pharmacy counter', equipe: 'pharmacist smiling customer', geral: ['pharmacy products shelf', 'woman smiling health', 'family care home', 'delivery motorcycle'] },
   estetica: { loja: 'beauty clinic interior', equipe: 'aesthetician smiling', geral: ['woman skincare', 'spa relaxing', 'glowing skin'] },
   alimentacao: { loja: 'restaurant interior', equipe: 'chef smiling kitchen', geral: ['delicious food', 'friends eating', 'fresh ingredients'] },
   moda: { loja: 'clothing store interior', equipe: 'shop assistant smiling', geral: ['fashion woman', 'outfit', 'shopping bags'] },
@@ -32,8 +32,9 @@ type PlanIn = { kind: string; art_photo?: string | null; art_product?: string | 
  */
 export async function planPhotos(company: Company, items: PlanIn[]) {
   const seg = RESERVE[toSegment(company.segment)] ?? RESERVE.outro;
+  const banned = bannedWords(company.forbidden);
   const photos = await photosBySubject(company.id, items);
-  const web = await pickProductPhotos(company.id, items.map((p, i) => (!photos[i] && p.art_product && !p.isDate ? p.art_product : null)));
+  const web = await pickProductPhotos(company.id, items.map((p, i) => (!photos[i] && p.art_product && !p.isDate ? p.art_product : null)), banned);
   let r = 0;
   const queryOf = (p: PlanIn) => {
     const ap = (p.art_photo ?? '').trim(); const low = ap.toLowerCase();
@@ -42,7 +43,7 @@ export async function planPhotos(company: Company, items: PlanIn[]) {
     if (ap) return ap;
     return seg.geral[r++ % seg.geral.length];
   };
-  const stock = await pickStockPhotos(company.id, items.map((p, i) => (photos[i] || web[i] || p.hasProductPhoto ? null : queryOf(p))));
+  const stock = await pickStockPhotos(company.id, items.map((p, i) => (photos[i] || web[i] || p.hasProductPhoto ? null : queryOf(p))), banned);
   const spec = (company.template_spec?.layouts ?? []).filter((l) => NEEDS_PHOTO.includes(l) && !['produto-flutuante', 'faixa-preco'].includes(l));
   const photoPool = spec.length ? spec : PHOTO_DEFAULT;
   const textPool = ['tipografico', 'cartao-central', 'citacao', 'lista-numerada'];

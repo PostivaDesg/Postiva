@@ -65,7 +65,8 @@ Texto DENTRO da arte (a arte é gerada automaticamente com o modelo da marca):
   Fotos reais e com vida, combinando com o assunto da peça. Se a empresa vende produtos, a foto mostra o TIPO DE PRODUTO ligado ao tema
   (ex.: post "comece o dia com energia" numa farmácia → "vitamin c orange tablets"; protetor solar → "sunscreen beach"; fralda → "baby diaper").
   Em datas comemorativas, a foto é do símbolo da data (ex.: Natal → "christmas tree ornaments"; Carnaval → "carnival confetti masks").
-  Nunca peça logotipos, marcas, caixas de remédio com nome, texto escrito ou celebridades.
+  Nunca peça logotipos, marcas, caixas de remédio com nome, texto escrito ou celebridades. Nunca bebida alcoólica, bar, cigarro, armas
+  ou qualquer coisa das proibições da marca.
   art_photo é OBRIGATÓRIO em TODA peça, nunca null: arte de cor lisa sem foto não é aceita. Dica, lista ou recado também têm foto da situação
   (ex.: "beba água" → "woman drinking water"; "pedido pelo WhatsApp" → "woman smartphone smiling"; Novembro Azul → "man doctor blue ribbon").
   Se a peça for sobre a própria loja ou a equipe, use exatamente "loja" ou "equipe" (a foto real da empresa entra no lugar).

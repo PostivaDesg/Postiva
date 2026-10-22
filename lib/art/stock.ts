@@ -5,7 +5,22 @@
 // Sem nenhuma das chaves, nada muda: o site usa só as fotos da empresa e os layouts de texto.
 import { supabaseAdmin } from '../supabase';
 
-type Hit = { key: string; url: string }; // key: "pixabay-123" / "pexels-456" (para não repetir)
+type Hit = { key: string; url: string; tags?: string }; // key: "pixabay-123" / "pexels-456" (para não repetir)
+
+// Nunca entra em arte nenhuma (as fotos de banco vêm com etiquetas; a foto é descartada se tiver uma destas)
+const BANNED = ['alcohol', 'alcoholic', 'beer', 'wine', 'whisky', 'whiskey', 'vodka', 'liquor', 'cocktail', 'bar', 'pub', 'drunk',
+  'cigarette', 'smoking', 'smoke', 'tobacco', 'vape', 'gun', 'weapon', 'drugs', 'marijuana', 'cannabis', 'casino', 'gambling',
+  'lingerie', 'bikini', 'sexy', 'blood', 'death', 'skull', 'cerveja', 'vinho', 'bebida alcoolica', 'cigarro'];
+
+/** Palavras proibidas: as fixas + as que a empresa escreveu em "o que nunca postar" (separadas por vírgula). */
+export function bannedWords(extra?: string | null) {
+  const own = String(extra ?? '').toLowerCase().split(/[,;\n]/).map((w) => w.trim()).filter((w) => w && w.length <= 30);
+  return [...BANNED, ...own];
+}
+const allowed = (h: Hit, banned: string[]) => {
+  const t = ` ${(h.tags ?? '').toLowerCase().replace(/[^a-z0-9à-ú]+/g, ' ')} `;
+  return !banned.some((w) => t.includes(` ${w} `));
+};
 
 export const stockEnabled = () => !!(process.env.PIXABAY_API_KEY || process.env.PEXELS_API_KEY);
 
@@ -19,8 +34,8 @@ async function pixabay(query: string, perPage: number): Promise<Hit[]> {
   u.searchParams.set('per_page', String(Math.max(3, Math.min(50, perPage))));
   const r = await fetch(u, { next: { revalidate: 86400 } }); // cache de 24h exigido pelo Pixabay
   if (!r.ok) return [];
-  const j = (await r.json()) as { hits?: { id: number; largeImageURL: string; webformatURL: string }[] };
-  return (j.hits ?? []).map((h) => ({ key: `pixabay-${h.id}`, url: h.largeImageURL || h.webformatURL }));
+  const j = (await r.json()) as { hits?: { id: number; largeImageURL: string; webformatURL: string; tags?: string }[] };
+  return (j.hits ?? []).map((h) => ({ key: `pixabay-${h.id}`, url: h.largeImageURL || h.webformatURL, tags: h.tags }));
 }
 
 async function pexels(query: string, perPage: number): Promise<Hit[]> {
@@ -30,8 +45,8 @@ async function pexels(query: string, perPage: number): Promise<Hit[]> {
   u.searchParams.set('per_page', String(perPage));
   const r = await fetch(u, { headers: { Authorization: process.env.PEXELS_API_KEY! }, next: { revalidate: 86400 } });
   if (!r.ok) return [];
-  const j = (await r.json()) as { photos?: { id: number; src: { portrait: string; large: string } }[] };
-  return (j.photos ?? []).map((p) => ({ key: `pexels-${p.id}`, url: p.src.portrait || p.src.large }));
+  const j = (await r.json()) as { photos?: { id: number; alt?: string; src: { portrait: string; large: string } }[] };
+  return (j.photos ?? []).map((p) => ({ key: `pexels-${p.id}`, url: p.src.portrait || p.src.large, tags: p.alt }));
 }
 
 /** Busca fotos para o tema (links temporários: servem para a prévia; para os posts use pickStockPhotos). */
@@ -64,7 +79,7 @@ async function saveCopy(companyId: string, hit: Hit) {
 }
 
 /** Uma foto por pedido, sem repetir as que a empresa já usou (nem dentro do mesmo lote). */
-export async function pickStockPhotos(companyId: string, queries: (string | null | undefined)[]) {
+export async function pickStockPhotos(companyId: string, queries: (string | null | undefined)[], banned: string[] = bannedWords()) {
   const out: (string | null)[] = queries.map(() => null);
   if (!stockEnabled() || !queries.some((q) => q?.trim())) return out;
   const { data: used } = await supabaseAdmin().from('posts').select('stock_photo_url')
@@ -75,7 +90,7 @@ export async function pickStockPhotos(companyId: string, queries: (string | null
   const groups = new Map<string, number[]>();
   queries.forEach((raw, i) => { const q = raw?.trim().toLowerCase(); if (q) groups.set(q, [...(groups.get(q) ?? []), i]); });
   await runLimited([...groups.entries()], 6, async ([q, idxs]) => {
-    const hits = await searchStock(q, 20);
+    const hits = (await searchStock(q, 30)).filter((h) => allowed(h, banned));
     for (const i of idxs) {
       for (const hit of hits) {
         if (seen.has(hit.key)) continue;
@@ -109,28 +124,28 @@ async function braveImages(query: string): Promise<Hit[]> {
   u.searchParams.set('safesearch', 'strict');
   const r = await fetch(u, { headers: { 'X-Subscription-Token': process.env.BRAVE_API_KEY!, Accept: 'application/json' }, next: { revalidate: 86400 } });
   if (!r.ok) return [];
-  const j = (await r.json()) as { results?: { url?: string; properties?: { url?: string; width?: number; height?: number }; thumbnail?: { src?: string } }[] };
+  const j = (await r.json()) as { results?: { title?: string; url?: string; properties?: { url?: string; width?: number; height?: number }; thumbnail?: { src?: string } }[] };
   const out: Hit[] = [];
   for (const it of j.results ?? []) {
     const src = it.properties?.url;
     const w = it.properties?.width ?? 0, h = it.properties?.height ?? 0;
     if (!src || (w && w < 400) || (h && h < 400)) continue;
     const key = 'web-' + [...src].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7).toString(36);
-    out.push({ key, url: src });
-    if (it.thumbnail?.src) out.push({ key: key + 't', url: it.thumbnail.src }); // se a original bloquear, a miniatura serve
+    out.push({ key, url: src, tags: it.title });
+    if (it.thumbnail?.src) out.push({ key: key + 't', url: it.thumbnail.src, tags: it.title }); // se a original bloquear, a miniatura serve
   }
   return out;
 }
 
 /** Foto real do produto (embalagem) para cada nome; copia para o armazenamento da empresa. */
-export async function pickProductPhotos(companyId: string, names: (string | null | undefined)[]) {
+export async function pickProductPhotos(companyId: string, names: (string | null | undefined)[], banned: string[] = bannedWords()) {
   const out: (string | null)[] = names.map(() => null);
   if (!productSearchEnabled()) return out;
   await runLimited(names.map((n, i) => [n, i] as const), 1, // o plano grátis do Brave aceita ~1 busca por segundo
     async ([n, i]) => {
     const q = n?.trim();
     if (!q) return;
-    for (const hit of (await braveImages(`${q} embalagem produto`)).slice(0, 8)) {
+    for (const hit of (await braveImages(`${q} embalagem produto`)).filter((h) => allowed(h, banned)).slice(0, 8)) {
       const path = await saveCopy(companyId, hit);
       if (path) { out[i] = path; break; }
     }
