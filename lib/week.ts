@@ -70,6 +70,20 @@ export async function saveWeek(company: any, quota: Record<PostKind, number>, pi
 /** Geração imediata (botão do gestor). */
 export async function generateWeekFor(companyId: string, weekStart: string, extraContext?: string) {
   const { company, quota, opts } = await prepareWeek(companyId, weekStart, extraContext);
-  const { pieces, usage } = await generateWeek(opts);
+  // Na hora (plano grátis da Vercel corta em 5 min): a semana vai em 2 pedidos ao mesmo tempo, dias 1–4 e 5–7.
+  const day = (n: number) => new Date(Date.parse(weekStart) + n * 864e5).toISOString().slice(0, 10);
+  const split = (q: number, share: number) => Math.round(q * share);
+  const qA = { story: split(quota.story, 4 / 7), post: split(quota.post, 4 / 7), reels: Math.ceil(quota.reels / 2) };
+  const qB = { story: quota.story - qA.story, post: quota.post - qA.post, reels: quota.reels - qA.reels };
+  const parts = await Promise.all([
+    generateWeek({ ...opts, quota: qA, days: { from: day(0), to: day(3), count: 4, part: 'Outra pessoa faz os dias seguintes: varie produtos e temas.' } }),
+    qB.story + qB.post + qB.reels > 0
+      ? generateWeek({ ...opts, quota: qB, days: { from: day(4), to: day(6), count: 3, part: 'Outra pessoa fez os dias anteriores com outros produtos: escolha produtos e temas diferentes dos mais óbvios.' } })
+      : Promise.resolve({ pieces: [], usage: null as any }),
+  ]);
+  const pieces = parts.flatMap((p) => p.pieces);
+  const usage = parts.map((p) => p.usage).filter(Boolean).reduce((a, u) => ({
+    ...a, input_tokens: a.input_tokens + u.input_tokens, output_tokens: a.output_tokens + u.output_tokens, cache_read_tokens: a.cache_read_tokens + u.cache_read_tokens,
+  }));
   return { created: await saveWeek(company, quota, pieces, usage), companyName: company.name as string };
 }

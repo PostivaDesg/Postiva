@@ -102,12 +102,16 @@ export interface WeekOpts {
   quota: Record<PostKind, number>;
   bestTimes?: string; // ex.: "stories 9h e 18h; posts 12h e 19h" (vindo do Metricool)
   extraContext?: string; // datas comemorativas, promoções da semana
+  days?: { from: string; to: string; count: number; part: string }; // só um pedaço da semana (geração na hora, em paralelo)
 }
 
 /** Monta o pedido da semana (usado na geração imediata e no envio em lote de domingo). */
 export function weekParams(opts: WeekOpts) {
   const { brand, weekStart, quota } = opts;
-  const userPrompt = `Crie o conteúdo da semana que começa em ${weekStart} (7 dias).
+  const span = opts.days
+    ? `Crie o conteúdo SÓ dos dias ${opts.days.from} a ${opts.days.to} (${opts.days.count} dias) da semana que começa em ${weekStart}. ${opts.days.part}`
+    : `Crie o conteúdo da semana que começa em ${weekStart} (7 dias).`;
+  const userPrompt = `${span}
 Quantidades EXATAS: ${quota.story} stories, ${quota.post} posts no feed, ${quota.reels} reels.
 Distribua por igual entre os dias.
 Melhores horários da conta: ${opts.bestTimes ?? 'stories 09:00, 13:00 e 18:00; posts 12:00 e 19:00; reels 11:00'}.
@@ -149,7 +153,8 @@ export function parseWeek(msg: { content: { type: string }[]; usage: { input_tok
  * O perfil da marca vai em cache, então as chamadas seguintes da mesma empresa ficam mais baratas.
  */
 export async function generateWeek(opts: WeekOpts) {
-  const res = await anthropic.messages.create(weekParams(opts) as any);
+  // streaming: respostas grandes (semana inteira) passam de 10 minutos no limite do SDK sem ele
+  const res = await anthropic.messages.stream(weekParams(opts) as any).finalMessage();
   return parseWeek(res as any);
 }
 
@@ -249,7 +254,7 @@ Distribua as datas entre ${opts.validFrom} e ${opts.validUntil}. No art_brief, d
 Responda SÓ com um array JSON:
 [{"kind":"story|post|reels","day":"AAAA-MM-DD","time":"HH:MM","title":"...","caption":"...","art_brief":"...","reason":"...","art_headline":"...","art_sub":null,"art_cta":null,"art_items":null,"items":[0]}]`;
 
-  const res = await anthropic.messages.create({
+  const res = await anthropic.messages.stream({
     model: MODEL,
     max_tokens: 16000,
     ...(ECONOMY as any),
@@ -258,7 +263,7 @@ Responda SÓ com um array JSON:
       { type: 'text', text: brandBlock(opts.brand), cache_control: { type: 'ephemeral' } },
     ],
     messages: [{ role: 'user', content: prompt }],
-  });
+  }).finalMessage();
   const text = res.content.filter((c) => c.type === 'text').map((c) => (c as { text: string }).text).join('');
   return {
     pieces: parseJsonArray(text) as (GeneratedPiece & { items: number[] })[],

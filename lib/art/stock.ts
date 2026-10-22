@@ -71,19 +71,28 @@ export async function pickStockPhotos(companyId: string, queries: (string | null
     .eq('company_id', companyId).not('stock_photo_url', 'is', null).order('created_at', { ascending: false }).limit(300);
   const keyOf = (s: string) => s.split('/').pop()!.replace(/\.\w+$/, '');
   const seen = new Set((used ?? []).map((u) => keyOf(u.stock_photo_url as string)));
-  const cache = new Map<string, Hit[]>();
-  for (let i = 0; i < queries.length; i++) {
-    const q = queries[i]?.trim().toLowerCase();
-    if (!q) continue;
-    if (!cache.has(q)) cache.set(q, await searchStock(q, 20));
-    for (const hit of cache.get(q)!) {
-      if (seen.has(hit.key)) continue;
-      seen.add(hit.key);
-      const path = await saveCopy(companyId, hit);
-      if (path) { out[i] = path; break; }
+  // Agrupa por tema e processa vários temas ao mesmo tempo (a semana inteira cabe no tempo da Vercel)
+  const groups = new Map<string, number[]>();
+  queries.forEach((raw, i) => { const q = raw?.trim().toLowerCase(); if (q) groups.set(q, [...(groups.get(q) ?? []), i]); });
+  await runLimited([...groups.entries()], 6, async ([q, idxs]) => {
+    const hits = await searchStock(q, 20);
+    for (const i of idxs) {
+      for (const hit of hits) {
+        if (seen.has(hit.key)) continue;
+        seen.add(hit.key);
+        const path = await saveCopy(companyId, hit);
+        if (path) { out[i] = path; break; }
+      }
     }
-  }
+  });
   return out;
+}
+
+async function runLimited<T>(items: T[], limit: number, fn: (x: T) => Promise<void>) {
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) { const it = items[next++]; await fn(it).catch(() => {}); }
+  }));
 }
 
 // ---------- Foto de produto achada na internet (busca de imagens do Brave, parecida com o Google Imagens) ----------
@@ -117,16 +126,15 @@ async function braveImages(query: string): Promise<Hit[]> {
 export async function pickProductPhotos(companyId: string, names: (string | null | undefined)[]) {
   const out: (string | null)[] = names.map(() => null);
   if (!productSearchEnabled()) return out;
-  for (let i = 0; i < names.length; i++) {
-    const q = names[i]?.trim();
-    if (!q) continue;
-    try {
-      for (const hit of (await braveImages(`${q} embalagem produto`)).slice(0, 8)) {
-        const path = await saveCopy(companyId, hit);
-        if (path) { out[i] = path; break; }
-      }
-    } catch { /* sem foto: segue para o banco de fotos */ }
-  }
+  await runLimited(names.map((n, i) => [n, i] as const), 1, // o plano grátis do Brave aceita ~1 busca por segundo
+    async ([n, i]) => {
+    const q = n?.trim();
+    if (!q) return;
+    for (const hit of (await braveImages(`${q} embalagem produto`)).slice(0, 8)) {
+      const path = await saveCopy(companyId, hit);
+      if (path) { out[i] = path; break; }
+    }
+  });
   return out;
 }
 
