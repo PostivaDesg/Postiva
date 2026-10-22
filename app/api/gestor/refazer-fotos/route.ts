@@ -18,11 +18,15 @@ export async function POST(req: Request) {
     .eq('company_id', companyId).eq('status', 'rascunho').order('scheduled_at').limit(120);
   if (!posts?.length) return NextResponse.json({ updated: 0 });
 
-  // rascunhos antigos sem tema de foto: o Claude sugere agora, pelo título e pela legenda
-  const missing = posts.filter((p) => !p.art_photo);
+  // o Claude revê o tema de foto de cada rascunho pelo título e pela legenda (mantém "loja"/"equipe" quando há foto própria)
+  const missing = posts;
   const qs = await photoQueries(missing.map((p) => ({ headline: p.art_headline ?? '', caption: p.caption, segment: company.segment }))).catch(() => []);
-  missing.forEach((p, i) => { if (qs[i]) p.art_photo = qs[i]; });
-  for (const p of missing) if (p.art_photo) await db.from('posts').update({ art_photo: p.art_photo }).eq('id', p.id);
+  missing.forEach((p, i) => {
+    if (!qs[i]?.q) return;
+    if (!['loja', 'equipe'].includes(String(p.art_photo ?? '').toLowerCase())) p.art_photo = qs[i].q;
+    if (!p.date_label) p.art_product = qs[i].p ?? p.art_product;
+  });
+  await Promise.all(missing.map((p) => db.from('posts').update({ art_photo: p.art_photo, art_product: p.art_product }).eq('id', p.id)));
 
   const plan = await planPhotos(company, posts.map((p) => ({
     kind: p.kind, art_photo: p.art_photo, art_product: p.art_product, date_label: p.date_label,

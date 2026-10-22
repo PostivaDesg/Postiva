@@ -1,6 +1,6 @@
 // Monta a arte de um post com o modelo da empresa.
 import { supabaseAdmin } from '../supabase';
-import { normalizeSpec, toTheme, variantTheme } from './theme';
+import { normalizeSpec, toTheme, variantTheme, textOn, type Theme } from './theme';
 import { renderArt } from './render';
 import { assetById, assetDataUrl, logoDataUrl } from './assets';
 import { directionById } from '../styles';
@@ -9,6 +9,17 @@ import { stockDataUrl } from './stock';
 
 const brl = (n: number | null | undefined) => (n == null ? null : Number(n).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }));
 const br = (d?: string | null) => (d ? d.split('-').reverse().slice(0, 2).join('/') : '');
+
+// Datas com cor própria (Novembro Azul, Outubro Rosa…): a arte usa a cor da campanha, não a cor alternada da marca
+const DATE_COLORS: [RegExp, string][] = [
+  [/azul/i, '#1565C0'], [/rosa/i, '#D81B60'], [/amarel/i, '#F9A825'], [/laranja/i, '#EF6C00'], [/verde/i, '#2E7D32'],
+  [/roxo|lil[aá]s/i, '#6A1B9A'], [/vermelh/i, '#C62828'], [/natal/i, '#B71C1C'], [/p[aá]scoa/i, '#8E24AA'],
+];
+export function dateTheme(theme: Theme, label?: string | null): Theme {
+  const hit = label ? DATE_COLORS.find(([re]) => re.test(label)) : null;
+  if (!hit) return theme;
+  return { ...theme, palette: { ...theme.palette, primary: hit[1] }, onPrimary: textOn(hit[1]) };
+}
 
 export async function companyTheme(company: any) {
   return toTheme(normalizeSpec(company.template_spec ?? {}, directionById(company.art_style).layouts));
@@ -32,7 +43,8 @@ export async function renderPostArt(postId: string) {
   return renderArt({
     layout: p.layout ?? 'tipografico',
     format: p.kind === 'post' ? 'post' : 'story',
-    theme: variantTheme(await companyTheme(company), p.id), // cada post com sua variação
+    // cada post com sua variação; data com cor de campanha usa a cor da campanha
+    theme: p.date_label ? dateTheme(await companyTheme(company), p.date_label) : variantTheme(await companyTheme(company), p.id),
     brandName: company.name,
     logo: await logoDataUrl(company.id),
     photo,

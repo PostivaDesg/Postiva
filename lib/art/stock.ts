@@ -17,6 +17,16 @@ export function bannedWords(extra?: string | null) {
   const own = String(extra ?? '').toLowerCase().split(/[,;\n]/).map((w) => w.trim()).filter((w) => w && w.length <= 30);
   return [...BANNED, ...own];
 }
+const STOP = new Set(['with', 'and', 'the', 'for', 'from', 'on', 'in', 'of', 'at', 'a', 'an', 'to', 'person', 'people', 'woman', 'man', 'hand', 'hands', 'holding', 'using', 'happy', 'smiling', 'home', 'care', 'product', 'products', 'photo', 'image', 'background']);
+const stem = (w: string) => w.replace(/(ies)$/, 'y').replace(/(es|s)$/, '');
+/** A foto tem nas etiquetas alguma palavra-chave do tema? (sem etiquetas, aceita) */
+function relevant(h: Hit, query: string) {
+  if (!h.tags) return true;
+  const keys = query.toLowerCase().split(/[^a-z]+/).filter((w) => w.length > 2 && !STOP.has(w)).map(stem);
+  if (!keys.length) return true;
+  const tags = h.tags.toLowerCase().split(/[^a-z]+/).filter(Boolean).map(stem);
+  return keys.some((k) => tags.some((t) => t === k || t.startsWith(k) || k.startsWith(t) && t.length > 3));
+}
 const allowed = (h: Hit, banned: string[]) => {
   const t = ` ${(h.tags ?? '').toLowerCase().replace(/[^a-z0-9à-ú]+/g, ' ')} `;
   return !banned.some((w) => t.includes(` ${w} `));
@@ -90,7 +100,8 @@ export async function pickStockPhotos(companyId: string, queries: (string | null
   const groups = new Map<string, number[]>();
   queries.forEach((raw, i) => { const q = raw?.trim().toLowerCase(); if (q) groups.set(q, [...(groups.get(q) ?? []), i]); });
   await runLimited([...groups.entries()], 6, async ([q, idxs]) => {
-    const hits = (await searchStock(q, 30)).filter((h) => allowed(h, banned));
+    // relevância: a foto precisa ter nas etiquetas pelo menos uma palavra principal do tema (evita sapato em post de hidratante)
+    const hits = (await searchStock(q, 40)).filter((h) => allowed(h, banned) && relevant(h, q));
     for (const i of idxs) {
       for (const hit of hits) {
         if (seen.has(hit.key)) continue;
