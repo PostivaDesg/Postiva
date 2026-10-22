@@ -41,31 +41,64 @@ export async function canvaExchangeCode(code: string, verifier: string) {
   if (!res.ok) throw new Error(`Canva OAuth: ${res.status} ${await res.text()}`);
   const j = await res.json() as { access_token: string; expires_in: number; refresh_token: string };
   await saveSetting('canva_refresh_token', j.refresh_token);
+  await saveSetting('canva_access_token', j.access_token);
+  await saveSetting('canva_access_exp', String(Date.now() + j.expires_in * 1000));
   cached = { token: j.access_token, expires: Date.now() + j.expires_in * 1000 };
 }
 
-async function accessToken() {
-  if (cached && cached.expires > Date.now() + 60_000) return cached.token;
-  const refresh = (await setting('canva_refresh_token')) ?? process.env.CANVA_REFRESH_TOKEN;
-  if (!refresh) throw new Error('Canva não conectado: toque em "Conectar Canva" no Diagnóstico.');
-  const res = await fetch(`${BASE}/oauth/token`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded', Authorization: basic() },
-    body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: refresh }),
-  });
-  if (!res.ok) throw new Error(`Canva OAuth: ${res.status} ${await res.text()}`);
-  const j = await res.json() as { access_token: string; expires_in: number; refresh_token?: string };
-  // o Canva troca o refresh token a cada uso: guarda o novo no banco
-  if (j.refresh_token && j.refresh_token !== refresh) await saveSetting('canva_refresh_token', j.refresh_token);
-  cached = { token: j.access_token, expires: Date.now() + j.expires_in * 1000 };
-  return cached.token;
+// O token de acesso fica no banco e é o MESMO para todas as instâncias do site: o Canva troca o refresh token a cada
+// renovação e derruba os tokens antigos, então cada instância renovando por conta própria dava "revoked_access_token".
+async function accessToken(failed?: string) {
+  if (!failed && cached && cached.expires > Date.now() + 60_000) return cached.token;
+  const { supabaseAdmin } = await import('./supabase');
+  const db = supabaseAdmin();
+  for (let attempt = 0; attempt < 15; attempt++) {
+    const { data: rows } = await db.from('app_settings').select('key, value, updated_at').in('key', ['canva_access_token', 'canva_access_exp', 'canva_refresh_lock']);
+    const get = (k: string) => rows?.find((r) => r.key === k);
+    const token = get('canva_access_token')?.value, exp = Number(get('canva_access_exp')?.value ?? 0);
+    if (token && exp > Date.now() + 60_000 && token !== failed) {
+      cached = { token, expires: exp };
+      return token;
+    }
+    // outra instância já está renovando: espera e lê o token novo
+    const lock = get('canva_refresh_lock');
+    if (lock && Date.now() - Date.parse(lock.updated_at) < 20_000) { await new Promise((r) => setTimeout(r, 1500)); continue; }
+    await db.from('app_settings').upsert({ key: 'canva_refresh_lock', value: String(Date.now()), updated_at: new Date().toISOString() });
+    try {
+      const refresh = (await setting('canva_refresh_token')) ?? process.env.CANVA_REFRESH_TOKEN;
+      if (!refresh) throw new Error('Canva não conectado: toque em "Conectar Canva" no Diagnóstico.');
+      const res = await fetch(`${BASE}/oauth/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', Authorization: basic() },
+        body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: refresh }),
+      });
+      if (!res.ok) throw new Error(`Canva OAuth: ${res.status} ${await res.text()} (se persistir, toque em "Conectar Canva" no Diagnóstico)`);
+      const j = await res.json() as { access_token: string; expires_in: number; refresh_token?: string };
+      const expires = Date.now() + j.expires_in * 1000;
+      const now = new Date().toISOString();
+      await db.from('app_settings').upsert([
+        { key: 'canva_access_token', value: j.access_token, updated_at: now },
+        { key: 'canva_access_exp', value: String(expires), updated_at: now },
+        ...(j.refresh_token ? [{ key: 'canva_refresh_token', value: j.refresh_token, updated_at: now }] : []),
+      ]);
+      cached = { token: j.access_token, expires };
+      return j.access_token;
+    } finally {
+      await db.from('app_settings').delete().eq('key', 'canva_refresh_lock');
+    }
+  }
+  throw new Error('Canva: não consegui renovar o acesso. Tente de novo em instantes.');
 }
 
 async function canva<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
+  const call = async (token: string) => fetch(`${BASE}${path}`, {
     ...init,
-    headers: { Authorization: `Bearer ${await accessToken()}`, 'Content-Type': 'application/json', ...(init.headers ?? {}) },
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...(init.headers ?? {}) },
   });
+  const first = await accessToken();
+  let res = await call(first);
+  // token derrubado (renovado por outra instância): pega o atual do banco (ou renova) e tenta de novo
+  if (res.status === 401) { cached = null; res = await call(await accessToken(first)); }
   if (!res.ok) throw new Error(`Canva ${path}: ${res.status} ${await res.text()}`);
   return res.json() as Promise<T>;
 }
