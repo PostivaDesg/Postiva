@@ -41,6 +41,22 @@ export default function GenerateWeek({ companyId, drafts }: {
     return pending.length ? ` ${ok} ${ok === 1 ? 'vídeo de reels montado' : 'vídeos de reels montados'}${fail ? `, ${fail} com falha (tente "Montar vídeos dos reels")` : ''}.` : '';
   }
 
+  // artes no Canva, uma por uma (só para empresa com modelos do Canva)
+  async function artesCanva(body: object, prefix = '') {
+    const r = await fetch('/api/gestor/canva-arts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ companyId, ...body }) }).catch(() => null);
+    const j = r?.ok ? await readJSON(r) : { pending: [] };
+    const pending: string[] = j.pending ?? [];
+    let ok = 0, fail = 0, lastErr = '';
+    for (let i = 0; i < pending.length; i++) {
+      setStatus(`${prefix}Montando as artes no Canva: ${i + 1} de ${pending.length}…`);
+      const b = await fetch('/api/gestor/canva-arts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ companyId, postId: pending[i] }) }).catch(() => null);
+      if (b?.ok) ok++; else { fail++; lastErr = b ? (await readJSON(b)).error ?? '' : 'sem conexão'; }
+    }
+    router.refresh();
+    if (j.off) return '';
+    return pending.length ? ` ${ok} artes feitas no Canva${fail ? `, ${fail} com falha (${lastErr})` : ''}.` : ' Artes do Canva já estão em dia.';
+  }
+
   return (
     <section className="painel pilha" style={{ gap: 14 }}>
       <div className="painel-titulo" style={{ marginBottom: 0 }}>
@@ -63,8 +79,9 @@ export default function GenerateWeek({ companyId, drafts }: {
           const f = await fetch('/api/gestor/refazer-fotos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ companyId, postIds: j.ids }) }).catch(() => null);
           const fj = f ? await readJSON(f) : {};
           const base = `${j.created} peças criadas como rascunho, ${fj.withPhoto ?? 0} com foto escolhida.`;
-          const reels = await montarReels({ postIds: j.ids }, base + ' ');
-          setStatus(base + reels);
+          const canvaMsg = await artesCanva({ postIds: j.ids }, base + ' ');
+          const reels = await montarReels({ postIds: j.ids }, base + canvaMsg + ' ');
+          setStatus(base + canvaMsg + reels);
         }}>
         Gerar com o Claude
       </button>
@@ -73,10 +90,21 @@ export default function GenerateWeek({ companyId, drafts }: {
       {drafts.length > 0 && <p className="muted" style={{ margin: 0 }}>{drafts.length} {drafts.length === 1 ? 'rascunho' : 'rascunhos'} desta empresa esperando revisão.</p>}
       {(
         <button className="btn ghost" style={{ justifySelf: 'start' }}
-          onClick={() => post('/api/gestor/refazer-fotos', { companyId }, (j) => `Fotos refeitas em ${j.updated} peças (${j.withPhoto} com foto).`)}>
+          onClick={async () => {
+            setStatus('Escolhendo as fotos de novo… (pode levar alguns minutos)');
+            const r = await fetch('/api/gestor/refazer-fotos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ companyId }) }).catch(() => null);
+            const j = r ? await readJSON(r) : { error: 'Sem conexão com o servidor.' };
+            if (!r?.ok) { setStatus(j.error ?? 'Passou do tempo: toque de novo para continuar de onde parou.'); return; }
+            const base = `Fotos refeitas em ${j.updated} peças.`;
+            setStatus(base + (await artesCanva({}, base + ' ')));
+          }}>
           Refazer fotos (rascunhos e não aprovados)
         </button>
       )}
+      <button className="btn ghost" style={{ justifySelf: 'start' }}
+        onClick={async () => { setStatus('Procurando artes para fazer no Canva…'); setStatus((await artesCanva({})) || 'Esta empresa ainda não tem modelos do Canva ou o Canva não está conectado (veja o Diagnóstico).'); }}>
+        Gerar artes no Canva
+      </button>
       {drafts.some((d) => d.kind === 'reels') && (
         <button className="btn ghost" style={{ justifySelf: 'start' }}
           onClick={async () => { setStatus('Procurando reels…'); setStatus((await montarReels({ refazer: true })) || 'Nenhum reels para montar.'); }}>

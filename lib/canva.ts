@@ -11,22 +11,52 @@ const BASE = 'https://api.canva.com/rest/v1';
 
 let cached: { token: string; expires: number } | null = null;
 
-async function accessToken() {
-  if (cached && cached.expires > Date.now() + 60_000) return cached.token;
+export const CANVA_SCOPES = 'design:content:read design:content:write design:meta:read brandtemplate:meta:read brandtemplate:content:read asset:read asset:write folder:read folder:write';
+export const canvaConfigured = () => !!(process.env.CANVA_CLIENT_ID && process.env.CANVA_CLIENT_SECRET);
+export const canvaRedirect = () => `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://postiva-design.vercel.app'}/api/canva/callback`;
+const basic = () => `Basic ${Buffer.from(`${process.env.CANVA_CLIENT_ID}:${process.env.CANVA_CLIENT_SECRET}`).toString('base64')}`;
+
+async function setting(key: string) {
+  const { supabaseAdmin } = await import('./supabase');
+  const { data } = await supabaseAdmin().from('app_settings').select('value').eq('key', key).maybeSingle();
+  return data?.value ?? null;
+}
+async function saveSetting(key: string, value: string) {
+  const { supabaseAdmin } = await import('./supabase');
+  await supabaseAdmin().from('app_settings').upsert({ key, value, updated_at: new Date().toISOString() });
+}
+
+/** O Canva está conectado (o gestor autorizou pelo botão "Conectar Canva")? */
+export async function canvaConnected() {
+  return canvaConfigured() && !!((await setting('canva_refresh_token')) ?? process.env.CANVA_REFRESH_TOKEN);
+}
+
+/** Troca o código da autorização pelo token (chamado pelo /api/canva/callback). */
+export async function canvaExchangeCode(code: string, verifier: string) {
   const res = await fetch(`${BASE}/oauth/token`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      Authorization: `Basic ${Buffer.from(`${process.env.CANVA_CLIENT_ID}:${process.env.CANVA_CLIENT_SECRET}`).toString('base64')}`,
-    },
-    body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: process.env.CANVA_REFRESH_TOKEN! }),
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', Authorization: basic() },
+    body: new URLSearchParams({ grant_type: 'authorization_code', code, code_verifier: verifier, redirect_uri: canvaRedirect() }),
+  });
+  if (!res.ok) throw new Error(`Canva OAuth: ${res.status} ${await res.text()}`);
+  const j = await res.json() as { access_token: string; expires_in: number; refresh_token: string };
+  await saveSetting('canva_refresh_token', j.refresh_token);
+  cached = { token: j.access_token, expires: Date.now() + j.expires_in * 1000 };
+}
+
+async function accessToken() {
+  if (cached && cached.expires > Date.now() + 60_000) return cached.token;
+  const refresh = (await setting('canva_refresh_token')) ?? process.env.CANVA_REFRESH_TOKEN;
+  if (!refresh) throw new Error('Canva não conectado: toque em "Conectar Canva" no Diagnóstico.');
+  const res = await fetch(`${BASE}/oauth/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', Authorization: basic() },
+    body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: refresh }),
   });
   if (!res.ok) throw new Error(`Canva OAuth: ${res.status} ${await res.text()}`);
   const j = await res.json() as { access_token: string; expires_in: number; refresh_token?: string };
-  // O Canva pode girar o refresh token: em produção, salve o novo no banco.
-  if (j.refresh_token && j.refresh_token !== process.env.CANVA_REFRESH_TOKEN) {
-    console.warn('[canva] novo refresh token emitido: atualize CANVA_REFRESH_TOKEN');
-  }
+  // o Canva troca o refresh token a cada uso: guarda o novo no banco
+  if (j.refresh_token && j.refresh_token !== refresh) await saveSetting('canva_refresh_token', j.refresh_token);
   cached = { token: j.access_token, expires: Date.now() + j.expires_in * 1000 };
   return cached.token;
 }
@@ -72,7 +102,7 @@ export async function uploadImageFromUrl(name: string, url: string) {
  */
 export async function fillTemplate(opts: {
   brandTemplateId: string;
-  folderId: string;
+  folderId?: string | null;
   title: string;
   fields: Record<string, { type: 'text'; text: string } | { type: 'image'; asset_id: string }>;
 }) {
@@ -89,7 +119,7 @@ export async function fillTemplate(opts: {
   }
   if (!designId) throw new Error('Canva autofill: tempo esgotado');
 
-  await canva('/folders/move', { method: 'POST', body: JSON.stringify({ item_id: designId, to_folder_id: opts.folderId }) });
+  if (opts.folderId) await canva('/folders/move', { method: 'POST', body: JSON.stringify({ item_id: designId, to_folder_id: opts.folderId }) }).catch(() => null);
   return designId;
 }
 
@@ -132,4 +162,10 @@ export async function exportPng(designId: string) {
     await wait(1500);
   }
   throw new Error('Canva export: tempo esgotado');
+}
+
+/** Campos de dados do modelo (nome → tipo), para preencher só o que o modelo tem. */
+export async function templateDataset(brandTemplateId: string) {
+  const j = await canva<{ dataset?: Record<string, { type: string }> }>(`/brand-templates/${brandTemplateId}/dataset`);
+  return j.dataset ?? {};
 }

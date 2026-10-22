@@ -1,3 +1,4 @@
+import { canvaConnected } from './canva';
 // Diagnóstico da configuração: mostra, em uma tela, o que já está ligado e o que falta.
 // Faz só consultas leves (nenhuma gera custo).
 import { supabaseAdmin } from './supabase';
@@ -64,6 +65,8 @@ export async function runChecks(): Promise<Check[]> {
   add('Fotos (Google Drive)', 'Conta de serviço', driveOk, false, 'Crie a conta de serviço no Google Cloud, ative a Drive API e cole a chave JSON. Sem isso, o cliente envia as fotos pelo painel.');
   add('Fotos de banco', 'Fotos gratuitas (PIXABAY_API_KEY)', has('PIXABAY_API_KEY') || has('PEXELS_API_KEY'), false, 'Crie conta grátis em pixabay.com, copie a chave em pixabay.com/api/docs e cole em PIXABAY_API_KEY. Sem isso, empresa sem foto própria recebe só artes de texto.');
   add('Fotos de banco', 'Fotos de produtos na internet (BRAVE_API_KEY)', has('BRAVE_API_KEY'), false, 'Crie a chave em api-dashboard.search.brave.com (plano com crédito grátis mensal). Sem isso, produto sem foto enviada usa foto do banco gratuito.');
+  add('Canva', 'Integração do Canva (CANVA_CLIENT_ID e CANVA_CLIENT_SECRET)', has('CANVA_CLIENT_ID') && has('CANVA_CLIENT_SECRET'), false, 'Crie a integração em canva.com/developers/integrations e cole o Client ID e o Client Secret na Vercel.');
+  add('Canva', 'Conta do Canva conectada', await canvaConnected(), false, 'Toque em "Conectar Canva" logo acima e autorize com a conta do Canva da Postiva.');
   add('Promoções (Cosmos)', 'Token do Cosmos (planilha com EAN)', has('COSMOS_TOKEN'), false, 'Cadastre-se em cosmos.bluesoft.com.br e copie o token. Sem isso, só o modo "puxar do site" funciona.');
 
   // Avisos

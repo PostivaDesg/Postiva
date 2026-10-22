@@ -31,6 +31,11 @@ export async function renderPostArt(postId: string) {
   const db = supabaseAdmin();
   const { data: p } = await db.from('posts').select('*').eq('id', postId).single();
   if (!p) return null;
+  // arte feita no Canva (da versão atual do post): devolve o PNG guardado
+  if (p.art_png_path && String(p.art_png_path).includes(`-v${p.art_version ?? 1}.png`)) {
+    const { data } = await db.storage.from('marcas').download(p.art_png_path);
+    if (data) return new Response(await data.arrayBuffer(), { headers: { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=86400' } });
+  }
   const { data: company } = await db.from('companies').select('*').eq('id', p.company_id).single();
   if (!company) return null;
 

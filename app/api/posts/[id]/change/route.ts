@@ -2,6 +2,7 @@
 // sem passar pela revisão da equipe. O motivo vira aprendizado da empresa (lib/learning.ts).
 import { NextResponse } from 'next/server';
 import { buildReel } from '@/lib/reels';
+import { canvaArt, companyUsesCanva } from '@/lib/canva-art';
 import { currentProfile, supabaseAdmin } from '@/lib/supabase';
 import { PLANS, type PlanId } from '@/lib/plans';
 import { revisePiece } from '@/lib/claude';
@@ -84,6 +85,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       ? { video_path: null, video_auto: false, reel_scenes: Array.isArray(piece.reel_scenes) ? piece.reel_scenes.slice(0, 4) : post.reel_scenes }
       : {}),
   }).eq('id', id);
+  if (await companyUsesCanva(post.company_id)) await canvaArt(id).catch((e) => console.error('[canva]', e));
   if (post.kind === 'reels' && (post.video_auto || !post.video_path)) await buildReel(id).catch((e) => console.error('[reels]', e));
   await db.from('ai_usage').insert({ company_id: post.company_id, ...usage });
 

@@ -6,7 +6,8 @@ import { runChecks } from '@/lib/diagnostico';
 
 export const dynamic = 'force-dynamic';
 
-export default async function Diagnostico() {
+export default async function Diagnostico({ searchParams }: { searchParams: Promise<{ canva?: string }> }) {
+  const { canva } = await searchParams;
   const me = await currentProfile();
   if (me?.role !== 'gestor') redirect('/login');
   const checks = await runChecks();
@@ -19,6 +20,11 @@ export default async function Diagnostico() {
       <p style={{ margin: 0, fontWeight: 600, color: missing ? '#A1281F' : 'var(--verde)' }}>
         {missing ? `${missing} itens obrigatórios faltando.` : 'Tudo o que é obrigatório está funcionando.'}
       </p>
+      {canva && <p role="status" style={{ margin: 0, fontWeight: 600, color: canva === 'ok' ? 'var(--verde)' : '#A1281F' }}>{canva === 'ok' ? 'Canva conectado.' : 'Não consegui conectar o Canva. Confira o Client ID, o Client Secret e o endereço de retorno na integração.'}</p>}
+      <section className="painel" style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ flex: '1 1 320px' }}><h2 style={{ margin: 0 }}>Canva</h2><p className="muted" style={{ margin: '4px 0 0' }}>As artes das empresas com modelos do Canva são montadas lá. Autorize uma vez com a conta do Canva da Postiva.</p></div>
+        <a className="btn" href="/api/canva/connect">Conectar Canva</a>
+      </section>
       {areas.map((a) => (
         <section key={a} className="painel" style={{ display: 'grid', gap: 10 }}>
           <h2 style={{ margin: 0 }}>{a}</h2>
