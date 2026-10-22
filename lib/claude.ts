@@ -324,8 +324,10 @@ export async function photoQueries(items: { headline: string; caption?: string |
       role: 'user',
       content: `Para cada post de Instagram de ${items[0].segment ?? 'uma empresa'} abaixo, leia o título E a legenda e diga:
 - "q": a busca de foto de banco EM INGLÊS (2 a 5 palavras) que mostra exatamente o produto, a pessoa ou a cena de que a legenda fala;
-- "p": se a legenda fala de UM tipo de produto vendido na loja, o produto em português como é vendido (ex.: "protetor solar facial FPS 50"); senão null.
-Sem marcas, sem texto, sem bebida alcoólica, sem remédio de tarja. Post de horário, loja aberta ou entrega: cena de balcão/interior de loja do ramo, atendente sorrindo ou entregador de moto com bag; nunca paisagem, céu, lua, praia ou caminhão.\n${lessons ? lessons + '\n' : ''}${list}\n\nResponda SÓ com um array JSON de objetos {"n": número do post, "q": "busca", "p": "produto ou null"}, um para cada post.`,
+- "p": se a legenda fala de UM tipo de produto vendido na loja, o produto em português como é vendido, COM uma marca conhecida no Brasil
+  (a da legenda, se houver; senão a mais comum em farmácia), para achar a foto real da embalagem (ex.: "absorvente Intimus Gel", "sabonete Protex",
+  "protetor solar Sundown FPS 50"); senão null. Remédio de tarja: null.
+Na busca \"q\": sem marcas, sem texto, sem bebida alcoólica. Post de horário, loja aberta ou entrega: cena de balcão/interior de loja do ramo, atendente sorrindo ou entregador de moto com bag; nunca paisagem, céu, lua, praia ou caminhão.\n${lessons ? lessons + '\n' : ''}${list}\n\nResponda SÓ com um array JSON de objetos {"n": número do post, "q": "busca", "p": "produto ou null"}, um para cada post.`,
     }],
   });
   const text = res.content.filter((c) => c.type === 'text').map((c) => (c as { text: string }).text).join('');

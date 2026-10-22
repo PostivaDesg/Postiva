@@ -79,7 +79,7 @@ export async function pickWithVision(company: any, posts: PickIn[], onPick?: (i:
   const segName = company.segment ? String(company.segment) : 'pequena empresa';
   const [own, lessons, brandRows] = await Promise.all([
     photosBySubject(company.id, posts), photoLessons(company.id),
-    supabaseAdmin().from('company_assets').select('id').eq('company_id', company.id).in('kind', ['loja', 'equipe']).then((r) => r.data ?? []),
+    supabaseAdmin().from('company_assets').select('id, storage_path').eq('company_id', company.id).in('kind', ['loja', 'equipe']).then((r) => r.data ?? []),
   ]);
   let bi = 0;
   const brandPhoto = () => (brandRows.length ? brandRows[bi++ % brandRows.length].id as string : null);
@@ -160,10 +160,16 @@ export async function pickWithVision(company: any, posts: PickIn[], onPick?: (i:
       const p = posts[i];
       // embalagem (site da empresa primeiro) + foto de cena atrás: nunca fundo liso
       const cands = fresh(await productImages(p.art_product!, company.site_url), '', false);
-      const [path, bg] = await Promise.all([choose(i, cands, true), scene(i)]);
+      // com fotos reais da loja, a prateleira da própria drogaria vai atrás da embalagem (mais humano que foto de banco)
+      const shelfFirst = brandRows.length ? brandRows[bi++ % brandRows.length].storage_path as string | null : null;
+      const [path, bg] = await Promise.all([choose(i, cands, true), shelfFirst ? Promise.resolve(shelfFirst) : scene(i)]);
       if (path && bg) await save(i, { layout: 'produto-flutuante', asset_id: null, stock_photo_url: path, bg_photo_url: bg });
       else if (bg) await save(i, { layout: photoPool[k++ % photoPool.length], asset_id: null, stock_photo_url: bg, bg_photo_url: null });
-      else if (path) await save(i, { layout: 'produto-flutuante', asset_id: null, stock_photo_url: path, bg_photo_url: null });
+      else if (path) {
+        // embalagem achada mas nenhuma cena boa: a foto real da loja vai atrás da embalagem
+        const shelf = brandRows.length ? brandRows[bi++ % brandRows.length].storage_path as string | null : null;
+        await save(i, { layout: 'produto-flutuante', asset_id: null, stock_photo_url: path, bg_photo_url: shelf ?? null });
+      }
       else await stockPick(i);
     }),
     runLimited(restIdx, 5, stockPick),
