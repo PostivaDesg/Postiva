@@ -28,7 +28,7 @@ export async function GET(req: Request) {
       const { data: due } = await db.from('posts').select('id').eq('company_id', c.id).eq('status', 'aguardando')
         .lt('released_at', new Date(now - c.auto_approve_hours * 3600e3).toISOString());
       let n = 0;
-      for (const p of due ?? []) if ((await approvePost(p.id)).ok) n++;
+      for (const p of due ?? []) if ((await approvePost(p.id, false)).ok) n++;
       if (n) {
         await notifyClient(c.id, 'aprovar', `${n} posts foram aprovados automaticamente (sem resposta em ${c.auto_approve_hours}h). Dá para mudar isso em Minha marca.`, `auto-${c.id}-${day}`);
         sent++;

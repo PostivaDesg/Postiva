@@ -10,6 +10,7 @@ import { datesContext } from './dates';
 import { buildBrand } from './brand';
 import { withLayouts, artColumns } from './layout-rows';
 import { productPhotoNames } from './art/assets';
+import { learningContext } from './learning';
 
 export class WeekError extends Error {
   constructor(message: string, public status: number) { super(message); }
@@ -43,7 +44,8 @@ export async function prepareWeek(companyId: string, weekStart: string, extraCon
   const lastDay = new Date(Date.parse(weekStart) + 6 * 864e5).toISOString().slice(0, 10);
   const products = await productPhotoNames(companyId);
   const productsCtx = products.length ? `Fotos de produtos da loja (use o nome exato em art_product; sem preço): ${products.join('; ')}` : '';
-  const context = [datesContext(weekStart, lastDay, company.segment, company.city), productsCtx, extraContext].filter(Boolean).join('\n');
+  const learned = await learningContext(companyId);
+  const context = [datesContext(weekStart, lastDay, company.segment, company.city), productsCtx, learned, extraContext].filter(Boolean).join('\n');
   const opts = { brand: buildBrand(company, brand), weekStart, quota, extraContext: context || undefined };
   return { company, quota, opts, params: weekParams(opts) };
 }

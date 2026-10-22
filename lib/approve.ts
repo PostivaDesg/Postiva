@@ -6,6 +6,7 @@ import { supabaseAdmin } from './supabase';
 import { schedulePost } from './metricool';
 import { artUrl } from './art/url';
 import { notifyClient, notifyGestor } from './notify';
+import { recordFeedback } from './learning';
 
 export async function schedulePostNow(postId: string) {
   const db = supabaseAdmin();
@@ -34,11 +35,13 @@ export async function schedulePostNow(postId: string) {
   }
 }
 
-export async function approvePost(postId: string) {
+/** manual=false na aprovação automática (não é sinal de que o cliente gostou). */
+export async function approvePost(postId: string, manual = true) {
   const db = supabaseAdmin();
-  const { data: post } = await db.from('posts').select('id, status, kind, video_path, company_id, title').eq('id', postId).single();
+  const { data: post } = await db.from('posts').select('id, status, kind, video_path, company_id, title, art_photo').eq('id', postId).single();
   if (!post || post.status !== 'aguardando') return { ok: false as const, status: post?.status ?? 'inexistente' };
   await db.from('posts').update({ status: 'aprovado' }).eq('id', postId);
+  if (manual) await recordFeedback(post.company_id, 'aprovado', { post_kind: post.kind, title: post.title, art_photo: post.art_photo });
   if (post.kind === 'reels' && !post.video_path) {
     await notifyClient(post.company_id, 'aprovar', `Reels "${post.title}" aprovado. Envie o vídeo no painel para ele ser agendado.`, `video-${postId}`);
     return { ok: true as const, status: 'aguardando vídeo' };

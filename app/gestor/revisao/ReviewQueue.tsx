@@ -35,6 +35,7 @@ function Card({ it, onDone }: { it: Item; onDone: () => void }) {
   const [title, setTitle] = useState(it.title);
   const [caption, setCaption] = useState(it.caption);
   const [busy, setBusy] = useState(false);
+  const [reason, setReason] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const ref = useRef<HTMLElement>(null);
   const seconds = useRef(0);
@@ -53,7 +54,7 @@ function Card({ it, onDone }: { it: Item; onDone: () => void }) {
     setBusy(true); setErr(null);
     const r = await fetch('/api/gestor/review', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ postId: it.id, action, title, caption, seconds: seconds.current }),
+      body: JSON.stringify({ postId: it.id, action, title, caption, seconds: seconds.current, reason }),
     });
     const j = await r.json();
     setBusy(false);
@@ -78,6 +79,8 @@ function Card({ it, onDone }: { it: Item; onDone: () => void }) {
         <p style={{ whiteSpace: 'pre-line', fontSize: 14 }}>{it.artBrief}</p>
         {it.reason && <p className="muted" style={{ fontSize: 14 }}>{it.reason}</p>}
       </details>
+      <div><label htmlFor={`r-${it.id}`}>Se for descartar, por quê? (o Claude aprende com isso)</label>
+        <input id={`r-${it.id}`} placeholder="Ex.: foto não combina com o texto, tema repetido, tom muito formal" value={reason} onChange={(e) => setReason(e.target.value)} /></div>
       {err && <p role="alert" style={{ color: '#A1281F', margin: 0 }}>{err}</p>}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <button className="btn ok" disabled={busy} onClick={() => act('liberar')}>Liberar para o cliente</button>

@@ -6,6 +6,7 @@ import { revisePiece } from '@/lib/claude';
 import { buildBrand } from '@/lib/brand';
 import { photosBySubject } from '@/lib/art/assets';
 import { pickStockPhotos } from '@/lib/art/stock';
+import { recordFeedback } from '@/lib/learning';
 
 export const maxDuration = 120;
 
@@ -29,6 +30,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   }
 
   await db.from('posts').update({ status: 'ajuste', change_note: note }).eq('id', id);
+  await recordFeedback(post.company_id, 'ajuste', { post_kind: post.kind, title: post.title, art_photo: post.art_photo, note });
 
   const { piece, usage } = await revisePiece(
     buildBrand(company, brand),

@@ -3,16 +3,17 @@
 import { NextResponse } from 'next/server';
 import { currentProfile, supabaseAdmin } from '@/lib/supabase';
 import { notifyClient } from '@/lib/notify';
+import { recordFeedback } from '@/lib/learning';
 
 export async function POST(req: Request) {
   const me = await currentProfile();
   if (me?.role !== 'gestor') return NextResponse.json({ error: 'Só o gestor.' }, { status: 403 });
   const b = await req.json() as {
     postId: string; action: 'liberar' | 'descartar' | 'salvar';
-    title?: string; caption?: string; seconds?: number;
+    title?: string; caption?: string; seconds?: number; reason?: string;
   };
   const db = supabaseAdmin();
-  const { data: post } = await db.from('posts').select('id, company_id, status, review_seconds').eq('id', b.postId).single();
+  const { data: post } = await db.from('posts').select('id, company_id, status, review_seconds, kind, title, caption, art_photo').eq('id', b.postId).single();
   if (!post) return NextResponse.json({ error: 'Post não encontrado.' }, { status: 404 });
   if (post.status !== 'rascunho') return NextResponse.json({ error: 'Este post já saiu da fila.' }, { status: 409 });
 
@@ -22,6 +23,7 @@ export async function POST(req: Request) {
   if (typeof b.caption === 'string') patch.caption = b.caption;
 
   if (b.action === 'descartar') {
+    await recordFeedback(post.company_id, 'descartado', { post_kind: post.kind, title: post.title, art_photo: post.art_photo, note: b.reason?.trim() || null });
     await db.from('posts').delete().eq('id', post.id); // devolve a peça para a cota
     return NextResponse.json({ ok: true });
   }
@@ -30,6 +32,11 @@ export async function POST(req: Request) {
     patch.released_at = new Date().toISOString();
   }
   await db.from('posts').update(patch).eq('id', post.id);
+  // texto corrigido pelo gestor antes de liberar: vira lição
+  if (b.action === 'liberar' && ((typeof b.title === 'string' && b.title.trim() !== post.title) || (typeof b.caption === 'string' && b.caption.trim() !== String(post.caption ?? '').trim()))) {
+    await recordFeedback(post.company_id, 'editado', { post_kind: post.kind, title: b.title ?? post.title,
+      note: `antes: "${String(post.title).slice(0, 80)}" / legenda corrigida: "${String(b.caption ?? '').slice(0, 220)}"` });
+  }
 
   if (b.action === 'liberar') {
     const { count } = await db.from('posts').select('id', { count: 'exact', head: true })
