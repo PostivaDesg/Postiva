@@ -28,9 +28,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   }
   const { data: company } = await db.from('companies').select('*').eq('id', post.company_id).single();
   const { data: brand } = await db.from('brand_profiles').select('*').eq('company_id', post.company_id).single();
-  const limit = PLANS[company.plan as PlanId].changesPerPost;
-  if (post.change_requests >= limit) {
-    return NextResponse.json({ error: `Seu plano inclui ${limit} refações por post. Fale com a equipe.` }, { status: 409 });
+  // limite por semana (segunda a domingo, horário de Brasília), somando todos os posts da empresa
+  const limit = PLANS[company.plan as PlanId].changesPerWeek;
+  const now = new Date(Date.now() - 3 * 3600e3);
+  const monday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - ((now.getUTCDay() + 6) % 7), 3));
+  const { count } = await db.from('feedback').select('id', { count: 'exact', head: true })
+    .eq('company_id', post.company_id).eq('kind', 'ajuste').gte('created_at', monday.toISOString());
+  if (me.role !== 'gestor' && (count ?? 0) >= limit) {
+    return NextResponse.json({ error: `Você já usou as ${limit} refações desta semana. Elas renovam na segunda-feira; se precisar antes, fale com a equipe.` }, { status: 409 });
   }
 
   await db.from('posts').update({ status: 'ajuste', change_note: note }).eq('id', id);
