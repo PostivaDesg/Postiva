@@ -1,4 +1,5 @@
 'use client';
+// Um post para aprovar: arte à esquerda, legenda e decisão à direita.
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -21,31 +22,34 @@ export default function PostCard(p: {
   }
 
   return (
-    <article className="card" style={{ display: 'grid', gap: 10 }}>
-      <span className="badge">{p.kind} · {p.when}</span>
+    <article className="painel aprovar" id={`p-${p.id}`}>
       {p.artUrl
-        ? <img src={p.artUrl} alt={`Arte: ${p.title}`} style={{ width: '100%', borderRadius: 10 }} />
-        : <div className="muted" style={{ aspectRatio: '4/5', background: '#E9EDF4', borderRadius: 10, display: 'grid', placeItems: 'center' }}>Arte em produção</div>}
-      <strong>{p.title}</strong>
-      <p style={{ margin: 0, whiteSpace: 'pre-line' }}>{p.caption}</p>
-      {p.reason && <p className="muted" style={{ margin: 0, fontSize: 14 }}>Por que este post: {p.reason}</p>}
-      {msg && <p role="alert" style={{ color: '#A1281F', margin: 0 }}>{msg}</p>}
-
-      {modo === 'ajuste' ? (
-        <div style={{ display: 'grid', gap: 8 }}>
-          <label htmlFor={`n-${p.id}`}>O que você quer mudar?</label>
-          <textarea id={`n-${p.id}`} rows={3} value={nota} onChange={(e) => setNota(e.target.value)} />
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn" onClick={() => chamar('change', { note: nota })}>Enviar pedido</button>
-            <button className="btn ghost" onClick={() => setModo('idle')}>Cancelar</button>
+        ? <img src={p.artUrl} alt={`Arte: ${p.title}`} />
+        : <div className="vazio" style={{ aspectRatio: '4/5', placeItems: 'center' }}><p>Arte sendo gerada</p></div>}
+      <div className="pilha" style={{ gap: 14 }}>
+        <div>
+          <span className="status aguardando">{p.kind} · {p.when}</span>
+          <h3 style={{ marginTop: 10, fontSize: 19 }}>{p.title}</h3>
+        </div>
+        <p className="legenda-post">{p.caption}</p>
+        {p.reason && <p className="porque">Por que este post: {p.reason}</p>}
+        {msg && <p role="alert" style={{ color: 'var(--vermelho)', margin: 0 }}>{msg}</p>}
+        {modo === 'ajuste' ? (
+          <div className="pilha" style={{ gap: 8 }}>
+            <label htmlFor={`n-${p.id}`}>O que você quer mudar?</label>
+            <textarea id={`n-${p.id}`} rows={3} value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Ex.: trocar a foto, falar do delivery, texto mais curto" />
+            <div className="acoes">
+              <button className="btn" disabled={!nota.trim()} onClick={() => chamar('change', { note: nota })}>Enviar ajuste</button>
+              <button className="btn ghost" onClick={() => setModo('idle')}>Cancelar</button>
+            </div>
           </div>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button className="btn ok" disabled={modo === 'enviando'} onClick={() => chamar('approve')}>Aprovar</button>
-          <button className="btn ghost" disabled={modo === 'enviando'} onClick={() => setModo('ajuste')}>Pedir ajuste</button>
-        </div>
-      )}
+        ) : (
+          <div className="acoes">
+            <button className="btn ok" disabled={modo === 'enviando'} onClick={() => chamar('approve')}>{modo === 'enviando' ? 'Enviando…' : 'Aprovar'}</button>
+            <button className="btn ghost" disabled={modo === 'enviando'} onClick={() => setModo('ajuste')}>Pedir ajuste</button>
+          </div>
+        )}
+      </div>
     </article>
   );
 }

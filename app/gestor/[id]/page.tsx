@@ -5,6 +5,10 @@ import { currentProfile, supabaseAdmin } from '@/lib/supabase';
 import GenerateWeek from './GenerateWeek';
 import { ART_DIRECTIONS, directionById } from '@/lib/styles';
 import { toSegment } from '@/lib/dates';
+import Link from 'next/link';
+import { PLANS, type PlanId } from '@/lib/plans';
+import { artUrl } from '@/lib/art/url';
+import { STATUS_GESTOR, KIND, tz } from '@/lib/ui';
 
 export default async function ConfigEmpresa({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -17,6 +21,10 @@ export default async function ConfigEmpresa({ params }: { params: Promise<{ id: 
   const { data: drafts } = await db.from('posts').select('id, kind, scheduled_at, title, caption')
     .eq('company_id', id).eq('status', 'rascunho').order('scheduled_at');
   const { data: templates } = await db.from('company_templates').select('layout, brand_template_id').eq('company_id', id);
+  const { data: recent } = await db.from('posts').select('id, kind, status, title, scheduled_at, art_version, art_url')
+    .eq('company_id', id).gte('scheduled_at', new Date(Date.now() - 864e5).toISOString()).order('scheduled_at').limit(14);
+  const { data: sub } = await db.from('subscriptions').select('status, next_due_date').eq('company_id', id).maybeSingle();
+  const { count: fb } = await db.from('feedback').select('id', { count: 'exact', head: true }).eq('company_id', id);
   const dir = directionById(company?.art_style);
   const options = ART_DIRECTIONS[toSegment(company?.segment)];
 
@@ -52,16 +60,49 @@ export default async function ConfigEmpresa({ params }: { params: Promise<{ id: 
   );
 
   return (
-    <main className="wrap" style={{ display: 'grid', gap: 20 }}>
-      <h1 style={{ margin: 0 }}>{company?.name}: perfil do Claude</h1>
-      <form action={salvar} className="card" style={{ display: 'grid', gap: 16 }}>
+    <div className="pilha" style={{}}>
+      <header className="cabecalho">
+        <div>
+          <h1>{company?.name}</h1>
+          <p>{[company?.segment, company?.city, PLANS[company?.plan as PlanId]?.name && `Plano ${PLANS[company?.plan as PlanId].name}`].filter(Boolean).join(' · ')}</p>
+          <div className="acoes" style={{ marginTop: 10 }}>
+            <span className={`status ${sub?.status ?? ''}`}>Pagamento: {sub?.status ?? 'sem assinatura'}</span>
+            <span className={`status ${company?.template_status === 'aprovado' ? 'aprovado' : 'aguardando'}`}>Modelo visual {company?.template_status === 'aprovado' ? 'aprovado' : 'pendente'}</span>
+            <span className="status">{fb ?? 0} aprendizados registrados</span>
+          </div>
+        </div>
+        <div className="acoes">
+          <Link className="btn ghost" href={`/minha-marca?companyId=${id}`}>Minha marca do cliente</Link>
+          <Link className="btn ghost" href={`/relatorio?companyId=${id}`}>Relatório</Link>
+        </div>
+      </header>
+
+      <section className="painel" aria-label="Próximas peças">
+        <div className="painel-titulo"><div><h2>Próximas peças</h2><p>O que vai ao ar a partir de hoje e em que pé está.</p></div><Link href="/gestor/revisao">Abrir a fila de revisão</Link></div>
+        {recent?.length ? (
+          <div className="filme">
+            {recent.map((p) => (
+              <div key={p.id} className="quadro">
+                <figure className={p.kind === 'story' ? 'story' : ''}><img src={p.art_url ?? artUrl(p.id, p.art_version, false)} alt={`Arte: ${p.title}`} loading="lazy" /><span className={`status ${p.status}`}>{STATUS_GESTOR[p.status] ?? p.status}</span></figure>
+                <strong>{p.title}</strong>
+                <small>{KIND[p.kind]} · {new Date(p.scheduled_at).toLocaleString('pt-BR', { timeZone: tz, weekday: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</small>
+              </div>
+            ))}
+          </div>
+        ) : <div className="vazio"><p>Nenhuma peça a partir de hoje. Gere a semana logo abaixo.</p></div>}
+      </section>
+
+      <GenerateWeek companyId={id} drafts={drafts ?? []} />
+
+      <form action={salvar} className="painel pilha" style={{ gap: 16 }}>
+        <div className="painel-titulo" style={{ marginBottom: 0 }}><div><h2>Perfil do Claude</h2><p>Tudo o que o Claude sabe desta marca. Vale para as próximas gerações.</p></div></div>
         {campo('briefing', 'Briefing', brand?.briefing ?? '', 8, 'O que vende, preços, público, cidade, horário.')}
         {campo('tone', 'Tom de voz', brand?.tone ?? '', 6, 'Como a marca fala + 2 ou 3 legendas aprovadas como exemplo.')}
         {campo('rules', 'Proibições e regras', brand?.rules ?? '', 5, 'O que nunca pode ser dito ou mostrado.')}
         {campo('visual', 'Identidade visual', brand?.visual ?? '', 4, 'Cores, fontes, estilo das artes, modelos do Canva.')}
         <div><label htmlFor="metricool">ID da marca no Metricool</label><input id="metricool" name="metricool" defaultValue={company?.metricool_blog_id ?? ''} /></div>
         <div><label htmlFor="art_style">Direção de arte</label>
-          <select id="art_style" name="art_style" defaultValue={company?.art_style ?? ''} style={{ width: '100%', height: 46, borderRadius: 10, border: '1px solid #CBD2DD', padding: '0 10px' }}>
+          <select id="art_style" name="art_style" defaultValue={company?.art_style ?? ''} >
             {options.map((o) => <option key={o.id} value={o.id}>{o.name} – {o.brief}</option>)}
           </select>
           <p className="muted" style={{ fontSize: 13 }}>Layouts em rodízio: {dir.layouts.join(', ')}. Datas comemorativas usam layouts próprios, diferentes dos de outras empresas.</p>
@@ -75,8 +116,6 @@ export default async function ConfigEmpresa({ params }: { params: Promise<{ id: 
         </label>
         <button className="btn" style={{ justifySelf: 'start' }}>Salvar perfil</button>
       </form>
-
-      <GenerateWeek companyId={id} drafts={drafts ?? []} />
-    </main>
+    </div>
   );
 }

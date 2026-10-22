@@ -38,9 +38,8 @@ export default async function Relatorio({ searchParams }: { searchParams: Promis
   const monthName = new Date(Date.UTC(y, m - 1, 15)).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
 
   return (
-    <main className="wrap" style={{ maxWidth: 820, display: 'grid', gap: 18 }}>
+    <div className="pilha" style={{maxWidth: 820}}>
       <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-        <Link href={me.role === 'gestor' ? '/gestor' : '/painel'}>← Voltar</Link>
         <PrintButton />
       </div>
       <header>
@@ -71,6 +70,6 @@ export default async function Relatorio({ searchParams }: { searchParams: Promis
         </ul>
       </section>
       <p className="muted" style={{ fontSize: 13 }}>Alcance e seguidores: veja no Metricool ou nos insights do Instagram. No plano Pleno, a análise humanizada vem junto com este relatório.</p>
-    </main>
+    </div>
   );
 }

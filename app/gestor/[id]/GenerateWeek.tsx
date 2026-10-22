@@ -26,15 +26,11 @@ export default function GenerateWeek({ companyId, drafts }: {
   }
 
   return (
-    <section className="card" style={{ display: 'grid', gap: 14 }}>
-      <h2 style={{ margin: 0 }}>Modelo visual e relatório</h2>
-      <p className="muted" style={{ margin: 0 }}>O Claude desenha o modelo a partir do logo, das cores e dos exemplos que o cliente enviou em "Minha marca".</p>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <button className="btn ghost" onClick={() => post('/api/marca/modelo', { action: 'desenhar', companyId }, () => 'Modelo desenhado. O cliente vê a prévia em Minha marca para aprovar.')}>Desenhar modelo desta empresa</button>
-        <a className="btn ghost" href={`/minha-marca?companyId=${companyId}`} style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>Abrir Minha marca desta empresa</a>
-        <a className="btn ghost" href={`/relatorio?companyId=${companyId}`} style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>Relatório do mês</a>
+    <section className="painel pilha" style={{ gap: 14 }}>
+      <div className="painel-titulo" style={{ marginBottom: 0 }}>
+        <div><h2>Gerar semana</h2><p>O Claude escreve as peças e depois escolhe a foto de cada uma. Se a semana já tiver peças, ele completa só o que falta.</p></div>
+        <button className="btn ghost pequeno" onClick={() => post('/api/marca/modelo', { action: 'desenhar', companyId }, () => 'Modelo desenhado. O cliente vê a prévia em Minha marca para aprovar.')}>Redesenhar o modelo visual</button>
       </div>
-      <h2 style={{ margin: '10px 0 0' }}>Gerar semana</h2>
       <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
         <div><label htmlFor="week">Semana começando em</label><input id="week" type="date" value={week} onChange={(e) => setWeek(e.target.value)} /></div>
         <div><label htmlFor="extra">Contexto da semana (opcional)</label><input id="extra" placeholder="Ex.: Dia das Crianças, promoção X" value={extra} onChange={(e) => setExtra(e.target.value)} /></div>
@@ -52,10 +48,7 @@ export default function GenerateWeek({ companyId, drafts }: {
       </button>
       {status && <p role="status" style={{ margin: 0 }}>{status}</p>}
 
-      <h3 style={{ margin: '10px 0 0' }}>Rascunhos para revisar ({drafts.length})</h3>
-      <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.6 }}>
-        {drafts.map((d) => <li key={d.id}><strong>{d.kind}</strong> · {d.scheduled_at.slice(0, 16).replace('T', ' ')} · {d.title}</li>)}
-      </ul>
+      {drafts.length > 0 && <p className="muted" style={{ margin: 0 }}>{drafts.length} {drafts.length === 1 ? 'rascunho' : 'rascunhos'} desta empresa esperando revisão.</p>}
       {drafts.length > 0 && (
         <button className="btn ghost" style={{ justifySelf: 'start' }}
           onClick={() => post('/api/gestor/refazer-fotos', { companyId }, (j) => `Fotos refeitas em ${j.updated} rascunhos (${j.withPhoto} com foto).`)}>

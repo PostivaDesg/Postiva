@@ -16,15 +16,15 @@ export default function ReviewQueue({ items: initial }: { items: Item[] }) {
 
   return (
     <>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }} role="group" aria-label="Filtrar por empresa">
+      <div className="acoes" role="group" aria-label="Filtrar por empresa">
         {['', ...companies].map((c) => (
-          <button key={c || 'todas'} className={`btn ${filter === c ? '' : 'ghost'}`} style={{ height: 38 }} onClick={() => setFilter(c)}>
+          <button key={c || 'todas'} className={`btn pequeno ${filter === c ? 'escuro' : 'ghost'}`} aria-pressed={filter === c} onClick={() => setFilter(c)}>
             {c || 'Todas'}
           </button>
         ))}
       </div>
-      {shown.length === 0 && <p className="muted">Nada na fila.</p>}
-      <div style={{ display: 'grid', gap: 12 }}>
+      {shown.length === 0 && <div className="vazio"><h3>Fila vazia</h3><p>Gere a semana de uma empresa para os rascunhos aparecerem aqui.</p></div>}
+      <div className="pilha" style={{ marginTop: 16 }}>
         {shown.map((it) => <Card key={it.id} it={it} onDone={() => setItems((xs) => xs.filter((x) => x.id !== it.id))} />)}
       </div>
     </>
@@ -64,27 +64,29 @@ function Card({ it, onDone }: { it: Item; onDone: () => void }) {
 
   const when = new Date(it.scheduledAt).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
   return (
-    <article ref={ref} className="card" style={{ display: 'grid', gap: 10 }}>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-        <strong>{it.company}</strong>
-        <span className="badge">{KIND[it.kind] ?? it.kind} · {when}</span>
-        {it.isPromo && <span className="badge" style={{ background: '#EAF0FF', color: '#1C3BC2' }}>Promoção</span>}
-        {it.quickRequest && <span className="badge" style={{ background: '#E5F5EC', color: '#17704A' }}>Pedido do cliente</span>}
-      </div>
-      {it.quickRequest && <p style={{ margin: 0, fontSize: 14 }}><strong>Pedido:</strong> {it.quickRequest}</p>}
-      <img src={it.art} alt={`Prévia da arte: ${it.title}`} loading="lazy" style={{ width: 220, maxWidth: '100%', borderRadius: 10, border: '1px solid #E1E6EE' }} />
-      <div><label htmlFor={`t-${it.id}`}>Título</label><input id={`t-${it.id}`} value={title} onChange={(e) => setTitle(e.target.value)} /></div>
-      <div><label htmlFor={`c-${it.id}`}>Legenda / texto</label><textarea id={`c-${it.id}`} rows={5} value={caption} onChange={(e) => setCaption(e.target.value)} /></div>
-      <details><summary className="muted">Briefing da arte e motivo</summary>
-        <p style={{ whiteSpace: 'pre-line', fontSize: 14 }}>{it.artBrief}</p>
-        {it.reason && <p className="muted" style={{ fontSize: 14 }}>{it.reason}</p>}
-      </details>
-      <div><label htmlFor={`r-${it.id}`}>Se for descartar, por quê? (o Claude aprende com isso)</label>
-        <input id={`r-${it.id}`} placeholder="Ex.: foto não combina com o texto, tema repetido, tom muito formal" value={reason} onChange={(e) => setReason(e.target.value)} /></div>
-      {err && <p role="alert" style={{ color: '#A1281F', margin: 0 }}>{err}</p>}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <button className="btn ok" disabled={busy} onClick={() => act('liberar')}>Liberar para o cliente</button>
-        <button className="btn ghost" disabled={busy} onClick={() => act('descartar')}>Descartar</button>
+    <article ref={ref} className="painel aprovar">
+      <img src={it.art} alt={`Prévia da arte: ${it.title}`} loading="lazy" />
+      <div className="pilha" style={{ gap: 12 }}>
+        <div className="acoes" style={{ alignItems: 'center' }}>
+          <strong>{it.company}</strong>
+          <span className="status rascunho">{KIND[it.kind] ?? it.kind} · {when}</span>
+          {it.isPromo && <span className="status teste">Promoção</span>}
+          {it.quickRequest && <span className="status aprovado">Pedido do cliente</span>}
+        </div>
+        {it.quickRequest && <p className="porque"><strong>Pedido:</strong> {it.quickRequest}</p>}
+        <div><label htmlFor={`t-${it.id}`}>Título</label><input id={`t-${it.id}`} value={title} onChange={(e) => setTitle(e.target.value)} /></div>
+        <div><label htmlFor={`c-${it.id}`}>Legenda</label><textarea id={`c-${it.id}`} rows={6} value={caption} onChange={(e) => setCaption(e.target.value)} /></div>
+        <details><summary className="muted">Briefing da arte e motivo</summary>
+          <p style={{ whiteSpace: 'pre-line', fontSize: 14 }}>{it.artBrief}</p>
+          {it.reason && <p className="muted" style={{ fontSize: 14 }}>{it.reason}</p>}
+        </details>
+        <div><label htmlFor={`r-${it.id}`}>Se for descartar, por quê? O Claude aprende com isso.</label>
+          <input id={`r-${it.id}`} placeholder="Ex.: foto não combina com o texto, tema repetido, tom muito formal" value={reason} onChange={(e) => setReason(e.target.value)} /></div>
+        {err && <p role="alert" style={{ color: 'var(--vermelho)', margin: 0 }}>{err}</p>}
+        <div className="acoes">
+          <button className="btn ok" disabled={busy} onClick={() => act('liberar')}>Liberar para o cliente</button>
+          <button className="btn ghost" disabled={busy} onClick={() => act('descartar')}>Descartar</button>
+        </div>
       </div>
     </article>
   );

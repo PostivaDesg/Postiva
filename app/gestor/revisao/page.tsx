@@ -25,11 +25,12 @@ export default async function Revisao() {
   });
 
   return (
-    <main className="wrap" style={{ display: 'grid', gap: 16 }}>
-      <Link href="/gestor">← Todas as empresas</Link>
-      <h1 style={{ margin: 0 }}>Fila de revisão · {items.length} rascunhos</h1>
-      <p className="muted" style={{ margin: 0 }}>Edite direto no card. "Liberar" manda para o cliente aprovar; "Descartar" devolve a peça para a cota.</p>
+    <div className="pilha" style={{}}>
+      <header className="cabecalho">
+        <div><h1>Fila de revisão</h1>
+          <p>{items.length ? `${items.length} ${items.length === 1 ? 'rascunho' : 'rascunhos'}, do que vai ao ar primeiro para o último. Edite direto no texto; "Liberar" manda para o cliente aprovar e "Descartar" devolve a peça para a cota.` : 'Nenhum rascunho para revisar.'}</p></div>
+      </header>
       <ReviewQueue items={items} />
-    </main>
+    </div>
   );
 }

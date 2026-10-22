@@ -28,8 +28,7 @@ export default function Conta() {
   }
 
   return (
-    <main className="wrap" style={{ maxWidth: 480, display: 'grid', gap: 16 }}>
-      <Link href="/painel">← Voltar ao painel</Link>
+    <div className="pilha" style={{maxWidth: 480}}>
       <h1 style={{ margin: 0 }}>Minha conta</h1>
       <form onSubmit={trocar} className="card" style={{ display: 'grid', gap: 14 }}>
         <h2 style={{ margin: 0 }}>Trocar senha</h2>
@@ -39,6 +38,6 @@ export default function Conta() {
         <button className="btn" disabled={busy}>Salvar nova senha</button>
       </form>
       <button className="btn ghost" onClick={sair}>Sair</button>
-    </main>
+    </div>
   );
 }

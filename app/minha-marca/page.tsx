@@ -79,8 +79,7 @@ export default function MinhaMarca() {
   const count = (k: string) => assets.filter((a) => a.kind === k).length;
 
   return (
-    <main className="wrap" style={{ maxWidth: 860, display: 'grid', gap: 20 }}>
-      <Link href="/painel">← Voltar ao painel</Link>
+    <div className="pilha" style={{maxWidth: 860}}>
       <h1 style={{ margin: 0 }}>Minha marca</h1>
       <p className="muted" style={{ margin: 0 }}>Quanto mais completo, mais os posts ficam com a cara da sua empresa. Você pode voltar aqui quando quiser.</p>
       {msg && <p role="status" className="card" style={{ margin: 0 }}>{msg}</p>}
@@ -115,7 +114,7 @@ export default function MinhaMarca() {
         <section className="card" style={{ display: 'grid', gap: 14 }} aria-label="Prévia do modelo">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <h2 style={{ margin: 0 }}>Seu modelo</h2>
-            <span className="badge" style={model.status === 'aprovado' ? { background: '#E5F5EC', color: '#17704A' } : undefined}>{model.status === 'aprovado' ? 'Aprovado' : 'Aguardando sua aprovação'}</span>
+            <span className="badge" style={model.status === 'aprovado' ? { background: '#E5F5EC', color: 'var(--verde)' } : undefined}>{model.status === 'aprovado' ? 'Aprovado' : 'Aguardando sua aprovação'}</span>
           </div>
           {model.notes && <p className="muted" style={{ margin: 0 }}>{model.notes}</p>}
           <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}>
@@ -157,7 +156,7 @@ export default function MinhaMarca() {
       </form>
 
       <section className="card" style={{ display: 'grid', gap: 12 }}>
-        <h2 style={{ margin: 0 }}>Google Drive {linked && <span className="badge" style={{ background: '#E5F5EC', color: '#17704A' }}>Vinculado</span>}</h2>
+        <h2 style={{ margin: 0 }}>Google Drive {linked && <span className="badge" style={{ background: '#E5F5EC', color: 'var(--verde)' }}>Vinculado</span>}</h2>
         <ol style={{ margin: 0, paddingLeft: 18, lineHeight: 1.7 }}>
           <li>Crie uma pasta no seu Drive com fotos da loja, da equipe e dos produtos.</li>
           <li>Clique em Compartilhar e adicione <strong>{driveEmail ?? 'o e-mail da Postiva Design'}</strong> como Leitor.</li>
@@ -183,6 +182,6 @@ export default function MinhaMarca() {
         </div>
         <p className="muted" style={{ margin: 0 }}>{assets.length} arquivos na sua marca ({assets.filter((a) => a.source === 'drive').length} do Drive).</p>
       </section>
-    </main>
+    </div>
   );
 }

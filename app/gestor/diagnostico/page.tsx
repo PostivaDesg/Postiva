@@ -14,8 +14,7 @@ export default async function Diagnostico() {
   const areas = Array.from(new Set(checks.map((c) => c.area)));
 
   return (
-    <main className="wrap" style={{ maxWidth: 860, display: 'grid', gap: 16 }}>
-      <Link href="/gestor">← Todas as empresas</Link>
+    <div className="pilha" style={{maxWidth: 860}}>
       <h1 style={{ margin: 0 }}>Diagnóstico da configuração</h1>
       <p style={{ margin: 0, fontWeight: 600, color: missing ? '#A1281F' : '#17704A' }}>
         {missing ? `${missing} itens obrigatórios faltando.` : 'Tudo o que é obrigatório está funcionando.'}
@@ -34,6 +33,6 @@ export default async function Diagnostico() {
           ))}
         </section>
       ))}
-    </main>
+    </div>
   );
 }

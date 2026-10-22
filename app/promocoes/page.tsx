@@ -76,8 +76,7 @@ export default function Promocoes() {
     items.filter((i) => i.include).every((i) => i.priceTo && (!i.isMedicine || i.otcConfirmed));
 
   return (
-    <main className="wrap" style={{ display: 'grid', gap: 20 }}>
-      <Link href="/painel">← Voltar ao painel</Link>
+    <div className="pilha" style={{}}>
       <h1 style={{ margin: 0 }}>Criar promoção</h1>
 
       <div role="tablist" style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -151,6 +150,6 @@ export default function Promocoes() {
           <p className="muted" style={{ margin: 0, fontSize: 13 }}>O Claude usa só os preços e a validade informados. As peças contam na cota do seu plano.</p>
         </section>
       )}
-    </main>
+    </div>
   );
 }
