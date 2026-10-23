@@ -20,7 +20,7 @@ export default function PostCard(p: {
     }).catch(() => null);
     const j = r ? await readJSON(r) : { error: 'Sem conexão com o servidor. Tente de novo.' };
     if (!r?.ok) { setMsg(j.error); setModo(back); return; }
-    setMsg(null); setNota(''); setModo('idle');
+    setMsg(j?.message ?? null); setNota(''); setModo('idle');
     router.refresh();
   }
 
@@ -43,10 +43,10 @@ export default function PostCard(p: {
         {modo === 'ajuste' ? (
           <div className="pilha" style={{ gap: 8 }}>
             <label htmlFor={`n-${p.id}`}>O que você não gostou?</label>
-            <span className="muted" style={{ fontSize: 13 }}>A IA refaz na hora e aprende com o seu motivo para acertar mais nas próximas artes.</span>
+            <span className="muted" style={{ fontSize: 13 }}>A nova versão volta para você aprovar, e o seu motivo ensina o que a sua empresa gosta.</span>
             <textarea id={`n-${p.id}`} rows={3} value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Ex.: a foto não tem a ver com o produto, texto muito longo, quero falar do delivery" />
             <div className="acoes">
-              <button className="btn" disabled={nota.trim().length < 4 || refazendo} onClick={async () => { setRefazendo(true); await chamar('change', { note: nota }, 'ajuste'); setRefazendo(false); }}>{refazendo ? 'Refazendo… (cerca de 1 minuto)' : 'Refazer com a IA'}</button>
+              <button className="btn" disabled={nota.trim().length < 4 || refazendo} onClick={async () => { setRefazendo(true); await chamar('change', { note: nota }, 'ajuste'); setRefazendo(false); }}>{refazendo ? 'Enviando…' : 'Pedir nova versão'}</button>
               <button className="btn ghost" onClick={() => setModo('idle')}>Cancelar</button>
             </div>
           </div>

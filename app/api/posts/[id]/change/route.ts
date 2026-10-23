@@ -12,6 +12,7 @@ import { pickStockPhotos } from '@/lib/art/stock';
 import { recordFeedback } from '@/lib/learning';
 import { pickWithVision } from '@/lib/art/pick';
 import { withFiveHashtags } from '@/lib/hashtags';
+import { chatMode } from '@/lib/mode';
 
 export const maxDuration = 300;
 
@@ -41,6 +42,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   await db.from('posts').update({ status: 'ajuste', change_note: note }).eq('id', id);
   await recordFeedback(post.company_id, 'ajuste', { post_kind: post.kind, title: post.title, art_photo: post.art_photo, note });
+  // modo chat: o pedido fica na fila e a nova versão volta para aprovação na próxima rodada do Claude
+  if (await chatMode()) return NextResponse.json({ ok: true, queued: true, message: 'Pedido recebido. A nova versão volta para você aprovar em algumas horas.' });
 
   const { piece, usage } = await revisePiece(
     await brandWithLearning(company, brand),

@@ -21,13 +21,14 @@ export default function Pedido() {
     const j = r ? await readJSON(r) : { error: 'Sem conexão com o servidor. Tente de novo.' }; setBusy(false);
     if (!r?.ok) return setMsg(j.error);
     setTopic('');
+    if (j.queued) return setMsg(j.message ?? 'Pedido recebido. A peça chega para você aprovar em algumas horas.');
     setMsg('Sua arte está pronta! Abrindo para você aprovar…');
     router.push(`/painel/aprovar#p-${j.postId}`);
   }
 
   return (
     <div className="pilha" style={{maxWidth: 640}}>
-      <header className="cabecalho"><div><h1>Pedido rápido</h1><p>Precisa de uma arte fora do calendário, até para hoje? Descreva aqui: a IA cria na hora e entrega para você aprovar. Usa a cota do seu plano.</p></div></header>
+      <header className="cabecalho"><div><h1>Pedido rápido</h1><p>Precisa de uma arte fora do calendário, até para hoje? Descreva aqui: a gente cria e entrega para você aprovar. Usa a cota do seu plano.</p></div></header>
       <form onSubmit={enviar} className="painel" style={{ display: 'grid', gap: 14 }}>
         <div><label htmlFor="topic">Sobre o que é o post?</label>
           <textarea id="topic" rows={4} maxLength={1000} required value={topic} onChange={(e) => setTopic(e.target.value)}

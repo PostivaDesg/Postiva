@@ -14,6 +14,8 @@ import { pickWithVision } from '@/lib/art/pick';
 import { buildReel } from '@/lib/reels';
 import { canvaArt, companyUsesCanva } from '@/lib/canva-art';
 
+import { chatMode } from '@/lib/mode';
+
 export const maxDuration = 300;
 
 export async function POST(req: Request) {
@@ -37,6 +39,16 @@ export async function POST(req: Request) {
   const left = await monthlyRemaining(cid, company.plan as PlanId, new Date(`${b.day}T12:00:00-03:00`));
   if (left[b.kind] <= 0) {
     return NextResponse.json({ error: `A cota de ${b.kind === 'reels' ? 'reels' : b.kind + 's'} deste mês acabou. Peça uma peça extra à equipe.` }, { status: 409 });
+  }
+
+  // modo chat: o pedido entra na fila e o Claude cria a peça na próxima rodada (texto, foto e arte)
+  if (await chatMode()) {
+    const { data: queued } = await db.from('posts').insert({
+      company_id: cid, kind: b.kind, scheduled_at: `${b.day}T12:00:00-03:00`,
+      title: b.topic.trim().slice(0, 80), caption: '', status: 'pedido', quick_request: b.topic.trim(), tracking_code: newTrackingCode(),
+    }).select('id').single();
+    if (!queued) return NextResponse.json({ error: 'Não consegui salvar o pedido. Tente de novo.' }, { status: 500 });
+    return NextResponse.json({ ok: true, queued: true, id: queued.id, message: 'Pedido recebido. A peça chega para você aprovar em algumas horas.' });
   }
 
   const { piece, usage } = await generateQuick(await brandWithLearning(company, brand), { topic: b.topic, kind: b.kind, day: b.day });
