@@ -26,8 +26,36 @@ const RESERVE: Record<string, { loja: string; equipe: string }> = {
 };
 const TEXT_ONLY = ['tipografico', 'cartao-central', 'citacao', 'lista-numerada'];
 
+// Sem crédito/sem acesso à API do Claude: em vez de jogar a foto da loja em tudo, escolhe pelas etiquetas do banco
+// de fotos (o Pixabay descreve cada foto com palavras). Embalagem de produto não tem etiqueta: fica de fora.
+let visionDown = false;
+const outage = (e: unknown) => {
+  const m = e instanceof Error ? e.message : String(e);
+  const st = (e as { status?: number })?.status;
+  return /credit balance|billing|overloaded|authentication|api[_ ]key|permission/i.test(m) || [401, 402, 403, 429, 529].includes(Number(st));
+};
+const KEY_STOP = new Set(['with', 'and', 'the', 'for', 'from', 'on', 'in', 'of', 'at', 'a', 'an', 'to', 'person', 'people', 'woman', 'man', 'hand', 'hands', 'holding', 'using', 'happy', 'smiling', 'home', 'care', 'product', 'products', 'photo', 'image', 'background', 'closeup', 'close', 'row', 'colorful', 'bottle', 'bottles']);
+const stemW = (w: string) => w.replace(/(ies)$/, 'y').replace(/(ing)$/, '').replace(/(es|s)$/, '');
+function byTags(query: string, cands: Hit[]) {
+  const keys = [...new Set(query.toLowerCase().split(/[^a-z]+/).filter((w) => w.length > 2 && !KEY_STOP.has(w)).map(stemW))];
+  if (!keys.length) return { pick: 0, hit: null as Hit | null, retry: null };
+  const need = Math.min(2, keys.length);
+  let best = -1, bestScore = 0;
+  cands.forEach((h, i) => {
+    const tags = String(h.tags ?? '').toLowerCase().split(/[^a-z]+/).filter(Boolean).map(stemW);
+    const score = keys.filter((k) => tags.some((t) => t === k || (t.length > 3 && k.startsWith(t)) || (k.length > 3 && t.startsWith(k)))).length;
+    if (score >= need && score > bestScore) { best = i; bestScore = score; }
+  });
+  return best >= 0 ? { pick: best + 1, hit: cands[best], retry: null } : { pick: 0, hit: null as Hit | null, retry: null };
+}
+const queryText = (p: PickIn) => {
+  const ap = String(p.art_photo ?? '').trim();
+  return ['loja', 'equipe'].includes(ap.toLowerCase()) ? p.headline : ap || p.headline;
+};
+
 /** Claude olha as candidatas e escolhe. Devolve o índice (0 = nenhuma serve) e, se nenhuma servir, uma busca melhor. */
-async function judge(segment: string, p: PickIn, cands: Hit[], product: boolean, lessons = '') {
+async function judge(segment: string, p: PickIn, cands: Hit[], product: boolean, lessons = '', query?: string) {
+  if (visionDown) return product ? { pick: 0, hit: null as Hit | null, retry: null } : byTags(query ?? queryText(p), cands);
   // baixa as miniaturas aqui e manda os bytes (o Claude não consegue abrir o link de alguns bancos de fotos;
   // antes, quando isso falhava, ficava a primeira foto da busca, mesmo sem nada a ver)
   const imgs = await Promise.all(cands.map(async (h) => {
@@ -67,12 +95,14 @@ async function judge(segment: string, p: PickIn, cands: Hit[], product: boolean,
     return { pick: n, hit: n ? cands[n - 1] : null, retry: j.nova_busca ? String(j.nova_busca) : null };
   } catch (e) {
     console.error('[pick] o Claude não conseguiu olhar as fotos', e instanceof Error ? e.message : e);
+    if (outage(e)) { visionDown = true; return product ? { pick: 0, hit: null, retry: null } : byTags(query ?? queryText(p), cands); }
     return { pick: 0, hit: null, retry: null }; // sem olhar, não escolhe nada (melhor foto própria da loja do que foto sem relação)
   }
 }
 
 /** onPick grava cada escolha assim que sai (se a Vercel cortar por tempo, o que já foi escolhido fica salvo). */
 export async function pickWithVision(company: any, posts: PickIn[], onPick?: (i: number, out: PickOut) => Promise<void>): Promise<PickOut[]> {
+  visionDown = false; // cada rodada testa de novo (o crédito pode ter voltado)
   const seg = toSegment(company.segment);
   const reserve = RESERVE[seg] ?? RESERVE.outro;
   const banned = bannedWords(company.forbidden);
@@ -105,9 +135,9 @@ export async function pickWithVision(company: any, posts: PickIn[], onPick?: (i:
   const restIdx = order.filter((i) => !productIdx.includes(i));
 
   const tries = new Map<number, number>();
-  const choose = async (i: number, cands: Hit[], product: boolean): Promise<string | null> => {
+  const choose = async (i: number, cands: Hit[], product: boolean, q?: string): Promise<string | null> => {
     if (!cands.length) return null;
-    const { pick, hit: chosen, retry } = await judge(segName, posts[i], cands, product, lessons);
+    const { pick, hit: chosen, retry } = await judge(segName, posts[i], cands, product, lessons, q);
     if (pick > 0 && chosen) {
       const hit = chosen;
       seen.add(hit.key);
@@ -120,7 +150,7 @@ export async function pickWithVision(company: any, posts: PickIn[], onPick?: (i:
         const rest = cands.filter((c) => c !== hit && c.url !== hit.url);
         const t = (tries.get(i) ?? 0) + 1;
         tries.set(i, t);
-        return rest.length && t <= 2 ? choose(i, rest, true) : null;
+        return rest.length && t <= 2 ? choose(i, rest, true, q) : null;
       }
       return (await saveCopy(company.id, hit)) ?? (hit.thumb && hit.thumb !== hit.url ? await saveCopy(company.id, { ...hit, key: hit.key + 't', url: hit.thumb }) : null);
     }
@@ -140,7 +170,7 @@ export async function pickWithVision(company: any, posts: PickIn[], onPick?: (i:
   const scene = async (i: number) => {
     if (!stockEnabled()) return null;
     const q = queryOf(posts[i]);
-    return choose(i, fresh(await searchStock(q, 30), q), false);
+    return choose(i, fresh(await searchStock(q, 30), q), false, q);
   };
 
   const stockPick = async (i: number) => {
@@ -148,7 +178,7 @@ export async function pickWithVision(company: any, posts: PickIn[], onPick?: (i:
     if (own[i]) { await save(i, { layout: TEXT_ONLY.includes(p.layout) ? photoPool[k++ % photoPool.length] : p.layout, asset_id: own[i], stock_photo_url: null }); return; }
     if (!stockEnabled()) return;
     const q = queryOf(p);
-    const path = await choose(i, fresh(await searchStock(q, 30), q), false);
+    const path = await choose(i, fresh(await searchStock(q, 30), q), false, q);
     if (!path) {
       // nenhuma foto de banco serviu: usa uma foto real da loja/equipe (nunca uma foto sem relação)
       const b = brandPhoto();
