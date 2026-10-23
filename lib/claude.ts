@@ -86,8 +86,12 @@ Texto DENTRO da arte (a arte é gerada automaticamente com o modelo da marca):
   (farmácia: "pharmacist smiling pharmacy counter", "pharmacy shelves customer", "delivery motorcycle courier bag"). Nunca paisagem, céu, lua, praia,
   pôr do sol, caminhão ou estrada só porque o texto fala de noite, sábado ou entrega.
 - art_product: quando a peça falar de UM produto. Se o contexto trouxer "Fotos de produtos da loja" e o produto estiver lá, use o nome EXATO
-  da lista. Senão, escreva o produto como ele é vendido (tipo + apresentação, ex.: "vitamina C efervescente 1g", "protetor solar facial FPS 50"),
-  para a foto real da embalagem ser buscada. Nunca medicamento de tarja vermelha ou preta. Nunca preço. Peça sem produto: null.
+  da lista. Senão, escreva o produto REAL como ele é vendido, COM uma marca conhecida no Brasil (tipo + marca + apresentação, ex.:
+  "hidratante Nivea Milk 400ml", "protetor solar Nivea Sun FPS 50", "vitamina Lavitan A-Z", "dipirona Novalgina 1g", "absorvente Intimus Gel"),
+  para a foto real da embalagem ser buscada e entrar na arte. Medicamento só se for isento de prescrição (sem tarja: dipirona, paracetamol,
+  antiácido, vitaminas, polivitamínicos); nunca tarja vermelha ou preta, nunca antibiótico. Nunca preço. Peça sem produto: null.
+  Peça de medicamento sem tarja: a legenda termina (antes das hashtags) com "Se persistirem os sintomas, o médico deverá ser consultado.";
+  sem prometer cura, sem "sem efeitos colaterais", sem falar com criança, sem indicar dose. Vitamina/suplemento não promete tratar doença.
   A foto, o título e a legenda falam da MESMA coisa.
 Reels: a Postiva monta o vídeo sozinha (capa = a arte, depois as cenas, no fim o logo e o WhatsApp). Todo reels traz "reel_scenes"
   com 3 ou 4 cenas em ordem, cada uma {"text": frase da tela com até 7 palavras, "photo": busca da foto em inglês ligada à frase}.
@@ -326,7 +330,7 @@ export async function photoQueries(items: { headline: string; caption?: string |
 - "q": a busca de foto de banco EM INGLÊS (2 a 5 palavras) que mostra exatamente o produto, a pessoa ou a cena de que a legenda fala;
 - "p": se a legenda fala de UM tipo de produto vendido na loja, o produto em português como é vendido, COM uma marca conhecida no Brasil
   (a da legenda, se houver; senão a mais comum em farmácia), para achar a foto real da embalagem (ex.: "absorvente Intimus Gel", "sabonete Protex",
-  "protetor solar Sundown FPS 50"); senão null. Remédio de tarja: null.
+  "protetor solar Nivea Sun FPS 50", "vitamina Lavitan A-Z", "dipirona Novalgina 1g"); senão null. Remédio sem tarja vale; remédio de tarja: null.
 Na busca \"q\": sem marcas, sem texto, sem bebida alcoólica. Post de horário, loja aberta ou entrega: cena de balcão/interior de loja do ramo, atendente sorrindo ou entregador de moto com bag; nunca paisagem, céu, lua, praia ou caminhão.\n${lessons ? lessons + '\n' : ''}${list}\n\nResponda SÓ com um array JSON de objetos {"n": número do post, "q": "busca", "p": "produto ou null"}, um para cada post.`,
     }],
   });

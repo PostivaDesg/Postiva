@@ -5,6 +5,7 @@
 // Sem nenhuma das chaves, nada muda: o site usa só as fotos da empresa e os layouts de texto.
 import { supabaseAdmin } from '../supabase';
 import { imageMime, toArtDataUrl, MAX_ART_IMAGE, imageSize } from './image-bytes';
+import { cutoutProduct } from './cutout';
 
 export type Hit = { key: string; url: string; tags?: string; thumb?: string }; // key: "pixabay-123" / "pexels-456" (para não repetir)
 
@@ -76,7 +77,8 @@ export async function searchStock(query: string, perPage = 15): Promise<Hit[]> {
 
 /** Copia a foto para o armazenamento da empresa e devolve o caminho ("banco/..."). */
 /** minSide: menor lado mínimo em pixels (foto de produto pequena fica borrada na arte). */
-export async function saveCopy(companyId: string, hit: Hit, minSide = 0) {
+/** cut: tira o fundo liso da embalagem (PNG transparente) para ela entrar na foto. */
+export async function saveCopy(companyId: string, hit: Hit, minSide = 0, cut = false) {
   try {
     const r = await fetch(hit.url, { signal: AbortSignal.timeout(15000) });
     if (!r.ok) return null;
@@ -85,6 +87,14 @@ export async function saveCopy(companyId: string, hit: Hit, minSide = 0) {
     const mime = bytes.length <= MAX_ART_IMAGE ? imageMime(bytes) : null;
     if (!mime) return null;
     if (minSide) { const d = imageSize(bytes); if (!d || Math.min(d.w, d.h) < minSide) return null; }
+    if (cut) {
+      const png = await cutoutProduct(bytes);
+      if (png) {
+        const path = `${companyId}/banco/${hit.key}-cut.png`;
+        const { error } = await supabaseAdmin().storage.from('marcas').upload(path, png, { contentType: 'image/png', upsert: true });
+        if (!error) return path;
+      }
+    }
     const path = `${companyId}/banco/${hit.key}.${mime === 'image/png' ? 'png' : 'jpg'}`;
     const { error } = await supabaseAdmin().storage.from('marcas').upload(path, bytes, { contentType: mime, upsert: true });
     return error ? null : path;

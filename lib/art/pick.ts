@@ -13,6 +13,7 @@ import { toSegment } from '../dates';
 export type PickIn = {
   id: string; kind: string; layout: string; date_label?: string | null;
   headline: string; caption?: string | null; art_photo?: string | null; art_product?: string | null;
+  product_image_url?: string | null; // embalagem escolhida à mão (pelo gestor ou pelo Claude na conversa): pula a busca
 };
 export type PickOut = { layout: string; asset_id: string | null; stock_photo_url: string | null; bg_photo_url?: string | null };
 
@@ -131,7 +132,7 @@ export async function pickWithVision(company: any, posts: PickIn[], onPick?: (i:
 
   // Produtos primeiro e um de cada vez (o Brave grátis aceita ~1 busca por segundo); o resto em paralelo
   const order = posts.map((_, i) => i);
-  const productIdx = order.filter((i) => !own[i] && posts[i].art_product && !posts[i].date_label && productSearchEnabled());
+  const productIdx = order.filter((i) => (posts[i].product_image_url || (!own[i] && posts[i].art_product && productSearchEnabled())) && !posts[i].date_label);
   const restIdx = order.filter((i) => !productIdx.includes(i));
 
   const tries = new Map<number, number>();
@@ -145,7 +146,7 @@ export async function pickWithVision(company: any, posts: PickIn[], onPick?: (i:
       if (product) {
         // só a embalagem que o Claude escolheu (pegar outra da lista sem olhar trazia produto errado);
         // se o site dela bloquear o download, o Claude escolhe de novo entre as que sobraram
-        const ok = await saveCopy(company.id, hit, 500);
+        const ok = await saveCopy(company.id, hit, 500, true);
         if (ok) return ok;
         const rest = cands.filter((c) => c !== hit && c.url !== hit.url);
         const t = (tries.get(i) ?? 0) + 1;
@@ -196,10 +197,13 @@ export async function pickWithVision(company: any, posts: PickIn[], onPick?: (i:
     runLimited(productIdx, 2, async (i) => {
       const p = posts[i];
       // embalagem (site da empresa primeiro) + foto de cena atrás: nunca fundo liso
-      const cands = fresh(await productImages(p.art_product!, company.site_url), '', false);
+      const manual = p.product_image_url
+        ? await saveCopy(company.id, { key: 'prod-' + Buffer.from(p.product_image_url).toString('base64url').slice(-16), url: p.product_image_url }, 300, true)
+        : null;
+      const cands = manual ? [] : fresh(await productImages(p.art_product!, company.site_url), '', false);
       // com fotos reais da loja, a prateleira da própria drogaria vai atrás da embalagem (mais humano que foto de banco)
       const shelfFirst = brandRows.length ? brandRows[bi++ % brandRows.length].storage_path as string | null : null;
-      const [path, bg] = await Promise.all([choose(i, cands, true), shelfFirst ? Promise.resolve(shelfFirst) : scene(i)]);
+      const [path, bg] = await Promise.all([manual ? Promise.resolve(manual) : choose(i, cands, true), scene(i).then((s) => s ?? shelfFirst)]);
       if (path && bg) await save(i, { layout: 'produto-flutuante', asset_id: null, stock_photo_url: path, bg_photo_url: bg });
       // sem embalagem: NÃO usa a prateleira como foto do post (era o "mesma foto em tudo"); vai para foto do assunto
       else if (!path) await stockPick(i);

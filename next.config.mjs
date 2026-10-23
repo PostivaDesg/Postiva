@@ -4,7 +4,7 @@ const fonts = ['./node_modules/@fontsource/*/files/*-latin-*-normal.woff'];
 const reel = [...fonts, './node_modules/ffmpeg-static/ffmpeg'];
 const nextConfig = {
   // ffmpeg-static acha o binário pelo próprio caminho: não pode ser empacotado
-  serverExternalPackages: ['ffmpeg-static'],
+  serverExternalPackages: ['ffmpeg-static', 'sharp'],
   // As artes são geradas no servidor com as fontes dos pacotes @fontsource:
   // garante que os arquivos de fonte vão junto para a Vercel.
   outputFileTracingIncludes: {
