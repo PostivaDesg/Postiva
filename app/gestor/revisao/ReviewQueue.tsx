@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 
 type Item = {
   id: string; kind: string; scheduledAt: string; title: string; caption: string; artBrief: string;
-  reason: string | null; quickRequest: string | null; isPromo: boolean; company: string; art: string;
+  reason: string | null; quickRequest: string | null; isPromo: boolean; company: string; art: string; video?: string | null;
 };
 
 const KIND: Record<string, string> = { story: 'Story', post: 'Post', reels: 'Reels' };
@@ -66,7 +66,9 @@ function Card({ it, onDone }: { it: Item; onDone: () => void }) {
   const when = new Date(it.scheduledAt).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
   return (
     <article ref={ref} className="painel aprovar">
-      <img src={it.art} alt={`Prévia da arte: ${it.title}`} loading="lazy" />
+      {it.video
+        ? <video src={it.video} poster={it.art} controls playsInline preload="none" style={{ width: '100%', borderRadius: 14, background: '#000', aspectRatio: '9/16', objectFit: 'cover' }} aria-label={`Vídeo do reels: ${it.title}`} />
+        : <img src={it.art} alt={`Prévia da arte: ${it.title}`} loading="lazy" />}
       <div className="pilha" style={{ gap: 12 }}>
         <div className="acoes" style={{ alignItems: 'center' }}>
           <strong>{it.company}</strong>
