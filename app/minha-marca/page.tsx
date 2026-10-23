@@ -72,7 +72,7 @@ export default function MinhaMarca() {
   async function desenhar(again: boolean) {
     await salvar();
     const j = await call('modelo', '/api/marca/modelo', json({ action: 'desenhar', feedback: again ? feedback : undefined }),
-      () => 'Modelo pronto! Veja a prévia abaixo.');
+      (j) => j.notes ?? 'Modelo pronto! Veja a prévia abaixo.');
     if (j) { setModel(j); setFeedback(''); }
   }
   const aprovar = () => call('aprovar', '/api/marca/modelo', json({ action: 'aprovar' }), () => 'Modelo aprovado. Todos os próximos posts usam ele.');
@@ -132,7 +132,7 @@ export default function MinhaMarca() {
           <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}>
             {model.previews.map((p) => <img key={p.url} src={p.url} alt={`Exemplo do layout ${p.layout}`} loading="lazy" style={{ width: '100%', borderRadius: 14, border: '1px solid var(--linha)' }} />)}
           </div>
-          <p className="muted" style={{ margin: 0, fontSize: 13 }}>Os textos são de exemplo. As duas últimas mostram como ficam as datas comemorativas.</p>
+          <p className="muted" style={{ margin: 0, fontSize: 13 }}>Os textos e as fotos são de exemplo.</p>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'end' }}>
             {model.status !== 'aprovado' && <button className="btn ok" disabled={!!busy} onClick={aprovar}>Aprovar este modelo</button>}
             <div style={{ flex: '1 1 280px' }}><label htmlFor="fb">Quer mudar algo?</label>
