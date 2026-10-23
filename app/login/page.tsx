@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { BRAND } from '@/lib/brand-config';
 import { PostivaLogo } from '@/components/Logo';
 
@@ -43,12 +44,13 @@ export default function LoginPage() {
         <div className="grade" aria-hidden="true">{tiles.map((c, i) => <div key={i} style={{ background: c }} />)}</div>
       </section>
       <form onSubmit={entrar}>
-        <div><h2 style={{ fontSize: 28 }}>Entrar</h2><p className="muted" style={{ margin: '6px 0 0' }}>Use o e-mail e a senha que você recebeu da {BRAND.name}.</p></div>
+        <div><h2 style={{ fontSize: 28 }}>Entrar</h2><p className="muted" style={{ margin: '6px 0 0' }}>Use o e-mail e a senha da sua conta na {BRAND.name}.</p></div>
         <div><label htmlFor="email">E-mail</label><input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></div>
         <div><label htmlFor="senha">Senha</label><input id="senha" type="password" autoComplete="current-password" value={senha} onChange={(e) => setSenha(e.target.value)} required /></div>
         {msg && <p role="status" style={{ margin: 0 }}>{msg}</p>}
         <button className="btn" disabled={carregando}>{carregando ? 'Entrando…' : 'Entrar'}</button>
         <button type="button" className="btn ghost" disabled={carregando} onClick={esqueci}>Esqueci a senha</button>
+        <p className="muted" style={{ margin: 0, textAlign: 'center' }}>Ainda não tem conta? <Link href="/cadastro">Criar conta grátis</Link></p>
       </form>
     </main>
   );
