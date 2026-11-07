@@ -48,3 +48,7 @@ pagamento, o gestor muda a assinatura para 'ativa'. Teste vencido não recebe ar
 3 stories por dia (09:00, 13:00 e 18:00) com preço lido no site drogariananofarma.com.br (a rotina de quinta roda no
 computador do gestor para abrir o site no navegador), no modelo `story_oferta` (EAHZJ6OsOYQ), sem pessoa, validade de
 1 semana (sábado a sexta da semana-alvo). Posts e reels nunca têm preço e sempre têm pessoa + embalagem.
+
+## Drogaria do Povão: 2 stories por semana com preço do site
+Terça e sexta às 13:00, com preço lido em companies.site_url (catálogo nappsolutions), produtos de giro alto
+(fralda, dipirona, soro fisiológico…), sem repetir o mesmo produto na mesma semana. Posts e reels sem preço.
