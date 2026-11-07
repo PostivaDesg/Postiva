@@ -57,3 +57,7 @@ Terça e sexta às 13:00, com preço lido em companies.site_url (catálogo napps
 Botão "Recebi o pagamento: ativar por +30 dias" (página da empresa) e "+30 dias" (lista de Empresas): assinatura vira
 'ativa', `subscriptions.pago_ate` soma 30 dias (a partir de hoje ou do fim do período atual) e a empresa é reativada.
 Quando `pago_ate` vence, o cliente vê o aviso de planos e as rotinas param. Sem `pago_ate` (ex.: NanoFarma) não vence.
+
+## Datas comerciais (Black Friday, Cyber Monday, Natal…)
+Na semana da data, peças temáticas com design próprio da data em cada empresa (versão temática dos layouts dela).
+Preço/desconto só com fonte oficial (promo_items, briefing ou site); sem isso, peça de chamada sem inventar desconto.

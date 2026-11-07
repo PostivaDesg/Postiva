@@ -32,6 +32,13 @@ BANCO: Supabase, projeto ccazsjfhbxsrnonakbub (use execute_sql). Referência com
 - Legenda de post/reels: gancho, informação, benefício, CTA com o WhatsApp da empresa e 5 hashtags (use companies.hashtags se houver). Stories: texto curto (a legenda nem aparece).
 - Datas comemorativas da semana quando fizerem sentido (ex.: Novembro Azul, Finados com respeito, sem venda).
 
+3B) DATAS COMERCIAIS (pedido do gestor): quando a semana-alvo tiver uma data de promoção do varejo — Black Friday (sexta depois do 4ª quinta-feira de novembro; 2026: 27/11), Cyber Monday (segunda seguinte; 2026: 30/11), Natal, Ano-Novo, Dia das Mães, Dia dos Pais, Dia do Cliente (15/09), Dia do Consumidor (15/03), Dia das Crianças etc. — faça peças TEMÁTICAS da data:
+- Na semana da data (e nos 2–3 dias antes, como "esquenta"), pelo menos 1 post por dia e 2 stories por dia com o tema; no dia da data, 1 reels temático se o plano tiver reels na semana.
+- Design próprio da data em cada empresa: crie no Canva uma versão temática dos layouts da empresa (copy-design de um layout próprio + edit-design: fundo e faixas na estética da data — Black Friday/Cyber Monday preto com destaque nas cores da marca; Natal vermelho/verde/dourado; etc.), sempre com o logo e as cores da empresa, diferentes entre empresas. Grave o id usado em art_brief ('canva:<id> data:<nome-da-data>').
+- PREÇO e DESCONTO: só o que vier de promo_items, do briefing ou do site da empresa (passos 2B/2C), com validade. Sem preço oficial, a peça é de chamada ("Black Friday na <empresa>: confira no site/WhatsApp"), sem inventar desconto, "% off", "menor preço" ou estoque.
+- Post e reels continuam SEM preço; o preço fica nos stories (regra geral).
+- date_label = nome da data.
+
 4) ARTES NO CANVA — CADA EMPRESA COM VISUAL PRÓPRIO.
 Modelos em companies.canva_brand_template_ids. Formato novo (ex.: NanoFarma): story_produto, story_foto, post_produto, post_foto (e story_oferta) são LISTAS de ids (layouts próprios da empresa); "base" é um objeto {story_produto, story_foto, post_produto, post_foto} com o layout parecido com o de outra empresa; logo_asset = id do logo. Formato antigo (ex.: Drogaria do Povão): cada chave é um id só (esse é o layout próprio dela).
 REGRA DE VARIEDADE (pedido do gestor): empresas diferentes não podem ter artes iguais. Use os layouts PRÓPRIOS da empresa, alternando entre os itens da lista (nunca o mesmo layout em duas peças seguidas do mesmo tipo). O layout "base" só pode ser usado em no máximo 1 de cada 10 peças do MÊS (some as peças do mês já no banco; o modelo usado fica em art_brief como 'canva:<id>', com ' base' no fim quando for o base), espaçadas — nunca em dias seguidos. Grave em art_brief qual modelo usou ('canva:<id>').
