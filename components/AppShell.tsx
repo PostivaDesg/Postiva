@@ -60,7 +60,12 @@ export default async function AppShell({ children }: { children: ReactNode }) {
     ];
     who = company?.name ?? 'Minha empresa';
     sub = me.full_name ?? '';
-    if (company?.ativa === false) {
+    if (company?.ativa === false && (company.motivo_inativa === 'teste_expirado' || company.motivo_inativa === 'falta_pagamento')) {
+      // motivo ligado a pagamento: mostra os planos para o cliente escolher e pagar
+      const m = motivoInativa(company.motivo_inativa);
+      aviso = <AvisoPlanos atual={company.plan} escolhido={assin?.plano_escolhido} titulo={m.titulo}
+        texto="Para continuar recebendo as artes e os agendamentos do seu Instagram, escolha um plano abaixo e faça o pagamento." nota={company.nota_inativa} />;
+    } else if (company?.ativa === false) {
       const m = motivoInativa(company.motivo_inativa);
       aviso = (
         <div className="aviso-inativa" role="alertdialog" aria-modal="true" aria-labelledby="aviso-inativa-titulo" aria-describedby="aviso-inativa-texto">

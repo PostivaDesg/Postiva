@@ -16,15 +16,16 @@ function itens(id: PlanId) {
   return l;
 }
 
-export default function AvisoPlanos({ atual, escolhido }: { atual?: string | null; escolhido?: string | null }) {
+export default function AvisoPlanos({ atual, escolhido, titulo, texto, nota }: { atual?: string | null; escolhido?: string | null; titulo?: string; texto?: string; nota?: string | null }) {
   const ids = (Object.keys(PLANS) as PlanId[]).filter((id) => PLANS[id].priceBRL != null);
   const esc = escolhido && PLANS[escolhido as PlanId];
   return (
     <div className="aviso-inativa" role="alertdialog" aria-modal="true" aria-labelledby="aviso-planos-titulo">
       <div className="aviso-inativa-caixa aviso-planos">
         <span className="aviso-inativa-icone" aria-hidden="true">!</span>
-        <h2 id="aviso-planos-titulo">Seu teste grátis de 7 dias terminou</h2>
-        <p>Para continuar recebendo as artes e os agendamentos do seu Instagram, escolha um plano e faça o pagamento.</p>
+        <h2 id="aviso-planos-titulo">{titulo ?? 'Seu teste grátis de 7 dias terminou'}</h2>
+        <p>{texto ?? 'Para continuar recebendo as artes e os agendamentos do seu Instagram, escolha um plano e faça o pagamento.'}</p>
+        {nota && <p className="aviso-inativa-nota">{nota}</p>}
         {esc && (
           <p className="aviso-inativa-nota">Você escolheu o plano {esc.name}. Assim que o pagamento for confirmado, sua conta volta a funcionar.
             Se ainda não recebeu o link de pagamento, a equipe da Postiva vai te enviar.</p>

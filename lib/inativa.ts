@@ -8,7 +8,7 @@ export const MOTIVOS_INATIVA = {
   teste_expirado: {
     label: 'Período de teste expirado',
     titulo: 'Seu período de teste terminou',
-    texto: 'Para continuar recebendo as artes e os agendamentos do seu Instagram, escolha um plano com a equipe da Postiva.',
+    texto: 'Para continuar recebendo as artes e os agendamentos do seu Instagram, escolha um plano e faça o pagamento.',
   },
   manutencao: {
     label: 'Manutenção',
