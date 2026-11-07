@@ -10,7 +10,8 @@ import { PLANS, type PlanId } from '@/lib/plans';
 import { artUrl } from '@/lib/art/url';
 import { STATUS_GESTOR, KIND, tz } from '@/lib/ui';
 import { MOTIVOS_INATIVA, motivoInativa, parseMotivo } from '@/lib/inativa';
-import { ativarEmpresa, desativarEmpresa } from '@/lib/pausa';
+import { ativarEmpresa, ativarPor30Dias, desativarEmpresa } from '@/lib/pausa';
+import { trialExpired } from '@/lib/trial';
 
 export default async function ConfigEmpresa({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -25,7 +26,7 @@ export default async function ConfigEmpresa({ params }: { params: Promise<{ id: 
   const { data: templates } = await db.from('company_templates').select('layout, brand_template_id').eq('company_id', id);
   const { data: recent } = await db.from('posts').select('id, kind, status, title, scheduled_at, art_version, art_url')
     .eq('company_id', id).gte('scheduled_at', new Date(Date.now() - 864e5).toISOString()).order('scheduled_at').limit(14);
-  const { data: sub } = await db.from('subscriptions').select('status, next_due_date').eq('company_id', id).maybeSingle();
+  const { data: sub } = await db.from('subscriptions').select('status, next_due_date, trial_ends_at, pago_ate, plano_escolhido').eq('company_id', id).maybeSingle();
   const { count: fb } = await db.from('feedback').select('id', { count: 'exact', head: true }).eq('company_id', id);
   const { count: pausados } = await db.from('posts').select('id', { count: 'exact', head: true }).eq('company_id', id).eq('status', 'pausado');
   const dir = directionById(company?.art_style);
@@ -60,7 +61,8 @@ export default async function ConfigEmpresa({ params }: { params: Promise<{ id: 
     'use server';
     const me2 = await currentProfile();
     if (me2?.role !== 'gestor') return;
-    if (form.get('ativa') === 'true') await ativarEmpresa(id);
+    if (form.get('mais30') === '1') await ativarPor30Dias(id);
+    else if (form.get('ativa') === 'true') await ativarEmpresa(id);
     else await desativarEmpresa(id, parseMotivo(form.get('motivo')), String(form.get('nota') ?? ''));
     revalidatePath(`/gestor/${id}`);
     revalidatePath('/gestor/empresas');
@@ -112,6 +114,17 @@ export default async function ConfigEmpresa({ params }: { params: Promise<{ id: 
               <input id="nota" name="nota" placeholder="Ex.: volta na segunda-feira" /></div>
           </>)}
           <button className={ativa ? 'btn ghost' : 'btn'}>{ativa ? 'Desativar empresa' : 'Ativar empresa'}</button>
+        </form>
+        <form action={alternarAtiva} className="acoes" style={{ marginTop: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          <input type="hidden" name="mais30" value="1" />
+          <button className="btn">Recebi o pagamento: ativar por +30 dias</button>
+          <span className="muted" style={{ fontSize: 13.5 }}>
+            {sub?.pago_ate
+              ? `Pago até ${new Date(sub.pago_ate).toLocaleDateString('pt-BR', { timeZone: tz })}${trialExpired(sub) ? ' (vencido: o cliente vê o aviso de planos)' : ''}. Cada clique soma 30 dias.`
+              : sub?.status === 'teste'
+                ? `Em teste${sub.trial_ends_at ? ` até ${new Date(sub.trial_ends_at).toLocaleDateString('pt-BR', { timeZone: tz })}` : ''}${trialExpired(sub) ? ' (vencido: o cliente vê o aviso de planos)' : ''}${sub.plano_escolhido ? `. Escolheu o plano ${PLANS[sub.plano_escolhido as PlanId]?.name ?? sub.plano_escolhido}` : ''}. Use quando receber em dinheiro ou Pix direto.`
+                : 'Sem vencimento manual. Use quando receber em dinheiro ou Pix direto: libera 30 dias e depois o cliente vê o aviso de planos.'}
+          </span>
         </form>
       </section>
 

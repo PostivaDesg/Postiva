@@ -52,3 +52,8 @@ computador do gestor para abrir o site no navegador), no modelo `story_oferta` (
 ## Drogaria do Povão: 2 stories por semana com preço do site
 Terça e sexta às 13:00, com preço lido em companies.site_url (catálogo nappsolutions), produtos de giro alto
 (fralda, dipirona, soro fisiológico…), sem repetir o mesmo produto na mesma semana. Posts e reels sem preço.
+
+## Pagamento manual (+30 dias)
+Botão "Recebi o pagamento: ativar por +30 dias" (página da empresa) e "+30 dias" (lista de Empresas): assinatura vira
+'ativa', `subscriptions.pago_ate` soma 30 dias (a partir de hoje ou do fim do período atual) e a empresa é reativada.
+Quando `pago_ate` vence, o cliente vê o aviso de planos e as rotinas param. Sem `pago_ate` (ex.: NanoFarma) não vence.

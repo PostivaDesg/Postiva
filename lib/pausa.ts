@@ -4,6 +4,7 @@
 // reativada, devolve cada peça ao status anterior, reativando no Metricool ou remarcando se a data já passou.
 import { supabaseAdmin } from '@/lib/supabase';
 import type { MotivoInativa } from '@/lib/inativa';
+import { novoPagoAte } from '@/lib/trial';
 
 export async function desativarEmpresa(id: string, motivo: MotivoInativa, nota?: string | null) {
   const db = supabaseAdmin();
@@ -19,4 +20,15 @@ export async function desativarEmpresa(id: string, motivo: MotivoInativa, nota?:
 export async function ativarEmpresa(id: string) {
   // As peças pausadas continuam 'pausado': a rotina agendada devolve o status e remarca no Metricool.
   await supabaseAdmin().from('companies').update({ ativa: true, motivo_inativa: null, nota_inativa: null, inativa_desde: null }).eq('id', id);
+}
+
+/** Pagamento manual (ex.: dinheiro): libera a empresa por mais 30 dias e reativa se estiver desativada. */
+export async function ativarPor30Dias(id: string) {
+  const db = supabaseAdmin();
+  const { data: sub } = await db.from('subscriptions').select('company_id, pago_ate').eq('company_id', id).maybeSingle();
+  const pago_ate = novoPagoAte(sub?.pago_ate);
+  if (sub) await db.from('subscriptions').update({ status: 'ativa', pago_ate, updated_at: new Date().toISOString() }).eq('company_id', id);
+  else await db.from('subscriptions').insert({ company_id: id, status: 'ativa', pago_ate });
+  await ativarEmpresa(id);
+  return pago_ate;
 }

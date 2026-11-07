@@ -41,7 +41,7 @@ export default async function AppShell({ children }: { children: ReactNode }) {
     const [{ data: company }, { count: pend }, { data: assin }] = await Promise.all([
       db.from('companies').select('name, plan, ativa, motivo_inativa, nota_inativa').eq('id', me.company_id!).single(),
       db.from('posts').select('id', { count: 'exact', head: true }).eq('company_id', me.company_id!).eq('status', 'aguardando'),
-      db.from('subscriptions').select('status, trial_ends_at, plano_escolhido').eq('company_id', me.company_id!).maybeSingle(),
+      db.from('subscriptions').select('status, trial_ends_at, plano_escolhido, pago_ate').eq('company_id', me.company_id!).maybeSingle(),
     ]);
     const restam = trialDaysLeft(assin);
     if (restam != null && restam > 0) {

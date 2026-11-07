@@ -6,7 +6,7 @@ import { currentProfile } from '@/lib/supabase';
 import { companyEconomics, HOURLY, FIXED } from '@/lib/gestor-data';
 import { brl } from '@/lib/ui';
 import { MOTIVOS_INATIVA, motivoInativa, parseMotivo } from '@/lib/inativa';
-import { ativarEmpresa, desativarEmpresa } from '@/lib/pausa';
+import { ativarEmpresa, ativarPor30Dias, desativarEmpresa } from '@/lib/pausa';
 
 export const dynamic = 'force-dynamic';
 const PAG: Record<string, string> = { ativa: 'Em dia', teste: 'Em teste', atrasada: 'Atrasada', cancelada: 'Cancelada' };
@@ -18,7 +18,8 @@ async function alternarAtiva(form: FormData) {
   if (me?.role !== 'gestor') return;
   const id = String(form.get('id') ?? '');
   if (!id) return;
-  if (form.get('ativa') === 'true') await ativarEmpresa(id);
+  if (form.get('mais30') === '1') await ativarPor30Dias(id);
+  else if (form.get('ativa') === 'true') await ativarEmpresa(id);
   else await desativarEmpresa(id, parseMotivo(form.get('motivo')));
   revalidatePath('/gestor/empresas');
   revalidatePath(`/gestor/${id}`);
@@ -52,6 +53,11 @@ export default async function Empresas() {
                       </select>
                     )}
                     <button className="btn ghost pequeno">{r.c.ativa === false ? 'Ativar' : 'Desativar'}</button>
+                  </form>
+                  <form action={alternarAtiva} style={{ marginTop: 6 }}>
+                    <input type="hidden" name="id" value={r.c.id} />
+                    <input type="hidden" name="mais30" value="1" />
+                    <button className="btn ghost pequeno" title="Recebi o pagamento (ex.: dinheiro): libera mais 30 dias">+30 dias</button>
                   </form>
                 </td>
                 <td>{r.plan}</td>
