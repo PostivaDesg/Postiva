@@ -8,6 +8,7 @@ import NavLinks, { type NavItem } from './NavLinks';
 import SignOut from './SignOut';
 import { Icon } from './icons';
 import { PostivaLogo } from './Logo';
+import { motivoInativa } from '@/lib/inativa';
 
 export default async function AppShell({ children }: { children: ReactNode }) {
   const me = await currentProfile();
@@ -17,6 +18,7 @@ export default async function AppShell({ children }: { children: ReactNode }) {
   let items: NavItem[];
   let who: string;
   let sub: string;
+  let aviso: ReactNode = null; // cliente com empresa desativada: aviso grande por cima de tudo
   if (me.role === 'gestor') {
     const [{ count: fila }, { count: empresas }] = await Promise.all([
       db.from('posts').select('id', { count: 'exact', head: true }).eq('status', 'rascunho'),
@@ -34,7 +36,7 @@ export default async function AppShell({ children }: { children: ReactNode }) {
   } else {
     if (!me.company_id) redirect('/login?erro=sem-empresa');
     const [{ data: company }, { count: pend }] = await Promise.all([
-      db.from('companies').select('name').eq('id', me.company_id!).single(),
+      db.from('companies').select('name, ativa, motivo_inativa, nota_inativa').eq('id', me.company_id!).single(),
       db.from('posts').select('id', { count: 'exact', head: true }).eq('company_id', me.company_id!).eq('status', 'aguardando'),
     ]);
     items = [
@@ -49,24 +51,39 @@ export default async function AppShell({ children }: { children: ReactNode }) {
     ];
     who = company?.name ?? 'Minha empresa';
     sub = me.full_name ?? '';
+    if (company?.ativa === false) {
+      const m = motivoInativa(company.motivo_inativa);
+      aviso = (
+        <div className="aviso-inativa" role="alertdialog" aria-modal="true" aria-labelledby="aviso-inativa-titulo" aria-describedby="aviso-inativa-texto">
+          <div className="aviso-inativa-caixa">
+            <span className="aviso-inativa-icone" aria-hidden="true">!</span>
+            <h2 id="aviso-inativa-titulo">{m.titulo}</h2>
+            <p id="aviso-inativa-texto">{m.texto}</p>
+            {company.nota_inativa && <p className="aviso-inativa-nota">{company.nota_inativa}</p>}
+            <div className="aviso-inativa-sair"><SignOut /></div>
+          </div>
+        </div>
+      );
+    }
   }
 
   const marca = <Link href={me.role === 'gestor' ? '/gestor' : '/painel'} className="marca" aria-label="Postiva Design, início"><PostivaLogo size={42} invert /></Link>;
   return (
     <div className="shell">
-      <aside className="sidebar">
+      <aside className="sidebar" inert={aviso ? true : undefined}>
         {marca}
         <NavLinks items={items} />
         <div className="quem"><strong>{who}</strong>{sub && <span>{sub}</span>}<SignOut /></div>
       </aside>
-      <header className="topo-movel">
+      <header className="topo-movel" inert={aviso ? true : undefined}>
         {marca}
         <details>
           <summary>Menu</summary>
           <NavLinks items={items} />
         </details>
       </header>
-      <main className="conteudo">{children}</main>
+      <main className="conteudo" inert={aviso ? true : undefined}>{children}</main>
+      {aviso}
     </div>
   );
 }

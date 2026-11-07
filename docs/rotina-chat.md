@@ -27,3 +27,14 @@ depois ler `media_links.url` (vale 10 dias; o Metricool copia o arquivo na hora 
 
 ## Modelos do Canva por empresa
 `companies.canva_brand_template_ids` (jsonb): post_produto, story_produto, story_foto, post_foto, logo_asset.
+
+## Empresa ativa ou desativada
+`companies.ativa` (boolean, padrão true) é o botão "Ativar/Desativar empresa" do gestor (página da empresa e lista de Empresas).
+As rotinas agendadas só fazem artes, refações, pedidos e agendamentos de empresas com `ativa = true`.
+Ao desativar, o gestor escolhe o motivo (`motivo_inativa`: falta_pagamento | teste_expirado | manutencao | outro, mais um
+recado opcional em `nota_inativa`) e o cliente vê um aviso grande por cima do painel com esse motivo.
+
+## NanoFarma: stories de oferta com preço do site
+3 stories por dia (09:00, 13:00 e 18:00) com preço lido no site drogariananofarma.com.br (a rotina de quinta roda no
+computador do gestor para abrir o site no navegador), no modelo `story_oferta` (EAHZJ6OsOYQ), sem pessoa, validade de
+1 semana (sábado a sexta da semana-alvo). Posts e reels nunca têm preço e sempre têm pessoa + embalagem.

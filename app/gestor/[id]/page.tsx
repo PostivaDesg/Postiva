@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { PLANS, type PlanId } from '@/lib/plans';
 import { artUrl } from '@/lib/art/url';
 import { STATUS_GESTOR, KIND, tz } from '@/lib/ui';
+import { MOTIVOS_INATIVA, motivoInativa, parseMotivo } from '@/lib/inativa';
 
 export default async function ConfigEmpresa({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -52,6 +53,21 @@ export default async function ConfigEmpresa({ params }: { params: Promise<{ id: 
     revalidatePath(`/gestor/${id}`);
   }
 
+  // Liga/desliga a produção: as rotinas agendadas só fazem artes de empresa ativa
+  async function alternarAtiva(form: FormData) {
+    'use server';
+    const me2 = await currentProfile();
+    if (me2?.role !== 'gestor') return;
+    const ligar = form.get('ativa') === 'true';
+    await supabaseAdmin().from('companies').update(ligar
+      ? { ativa: true, motivo_inativa: null, nota_inativa: null, inativa_desde: null }
+      : { ativa: false, motivo_inativa: parseMotivo(form.get('motivo')), nota_inativa: String(form.get('nota') ?? '').trim() || null, inativa_desde: new Date().toISOString() },
+    ).eq('id', id);
+    revalidatePath(`/gestor/${id}`);
+    revalidatePath('/gestor/empresas');
+  }
+  const ativa = company?.ativa !== false;
+
   const campo = (name: string, label: string, value: string, rows = 6, hint = '') => (
     <div>
       <label htmlFor={name}>{label}</label>
@@ -67,6 +83,7 @@ export default async function ConfigEmpresa({ params }: { params: Promise<{ id: 
           <h1>{company?.name}</h1>
           <p>{[company?.segment, company?.city, PLANS[company?.plan as PlanId]?.name && `Plano ${PLANS[company?.plan as PlanId].name}`].filter(Boolean).join(' · ')}</p>
           <div className="acoes" style={{ marginTop: 10 }}>
+            <span className={`status ${ativa ? 'aprovado' : 'cancelada'}`}>{ativa ? 'Produção ativa' : 'Produção desativada'}</span>
             <span className={`status ${sub?.status ?? ''}`}>Pagamento: {sub?.status ?? 'sem assinatura'}</span>
             <span className={`status ${company?.template_status === 'aprovado' ? 'aprovado' : 'aguardando'}`}>Modelo visual {company?.template_status === 'aprovado' ? 'aprovado' : 'pendente'}</span>
             <span className="status">{fb ?? 0} aprendizados registrados</span>
@@ -77,6 +94,27 @@ export default async function ConfigEmpresa({ params }: { params: Promise<{ id: 
           <Link className="btn ghost" href={`/relatorio?companyId=${id}`}>Relatório</Link>
         </div>
       </header>
+
+      <section className="painel" aria-label="Produção da empresa" id="producao">
+        <div className="painel-titulo"><div>
+          <h2>{ativa ? 'Produção ativa' : 'Produção desativada'}</h2>
+          <p>{ativa
+            ? 'As rotinas agendadas fazem as artes desta empresa. Ao desativar, elas param e o cliente vê um aviso grande no painel com o motivo escolhido.'
+            : `Desativada${company?.inativa_desde ? ` desde ${new Date(company.inativa_desde).toLocaleDateString('pt-BR', { timeZone: tz })}` : ''}. Motivo mostrado ao cliente: ${motivoInativa(company?.motivo_inativa).label}${company?.nota_inativa ? ` (${company.nota_inativa})` : ''}.`}</p>
+        </div></div>
+        <form action={alternarAtiva} className="acoes" style={{ alignItems: 'end', flexWrap: 'wrap' }}>
+          <input type="hidden" name="ativa" value={ativa ? 'false' : 'true'} />
+          {ativa && (<>
+            <div><label htmlFor="motivo">Motivo (o cliente vê)</label>
+              <select id="motivo" name="motivo" defaultValue="falta_pagamento">
+                {Object.entries(MOTIVOS_INATIVA).map(([k, m]) => <option key={k} value={k}>{m.label}</option>)}
+              </select></div>
+            <div style={{ flex: 1, minWidth: 220 }}><label htmlFor="nota">Recado ao cliente (opcional)</label>
+              <input id="nota" name="nota" placeholder="Ex.: volta na segunda-feira" /></div>
+          </>)}
+          <button className={ativa ? 'btn ghost' : 'btn'}>{ativa ? 'Desativar empresa' : 'Ativar empresa'}</button>
+        </form>
+      </section>
 
       <section className="painel" aria-label="Próximas peças">
         <div className="painel-titulo"><div><h2>Próximas peças</h2><p>O que vai ao ar a partir de hoje e em que pé está.</p></div><Link href="/gestor/revisao">Abrir a fila de revisão</Link></div>

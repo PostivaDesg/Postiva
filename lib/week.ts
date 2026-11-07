@@ -31,6 +31,7 @@ export async function prepareWeek(companyId: string, weekStart: string, extraCon
   const { data: sub } = await db.from('subscriptions').select('status').eq('company_id', companyId).single();
   if (!company || !brand) throw new WeekError('Empresa não encontrada.', 404);
   if (sub && !['teste', 'ativa'].includes(sub.status)) throw new WeekError(`Assinatura ${sub.status}: geração pausada.`, 402);
+  if (company.ativa === false) throw new WeekError('Empresa desativada pelo gestor: geração pausada.', 409);
   // Sem modelo visual aprovado, as artes sairiam genéricas: melhor não gerar e avisar
   if (company.template_status !== 'aprovado') throw new WeekError('Modelo visual ainda não aprovado (Minha marca > Desenhar meu modelo).', 409);
 

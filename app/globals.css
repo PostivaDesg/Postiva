@@ -229,3 +229,12 @@ input[type='file'] { padding: 9px; background: var(--papel); }
   .no-print, .sidebar, .topo-movel { display: none !important; }
   .shell { display: block; } body { background: #fff; } .card, .painel { break-inside: avoid; }
 }
+
+/* Aviso de empresa desativada (painel do cliente): cobre a tela toda */
+.aviso-inativa { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 16px; background: rgba(27, 26, 51, .72); backdrop-filter: blur(3px); }
+.aviso-inativa-caixa { width: min(560px, 100%); background: var(--superficie); border-radius: var(--raio); border-top: 8px solid var(--vermelho); padding: 36px 28px 28px; text-align: center; display: grid; gap: 14px; justify-items: center; box-shadow: 0 24px 60px rgba(0,0,0,.35); }
+.aviso-inativa-icone { width: 72px; height: 72px; border-radius: 50%; display: grid; place-items: center; background: var(--vermelho-claro); color: var(--vermelho); font-family: var(--display); font-size: 42px; font-weight: 800; }
+.aviso-inativa h2 { margin: 0; font-size: clamp(24px, 5vw, 32px); }
+.aviso-inativa p { margin: 0; font-size: 17px; color: var(--texto); }
+.aviso-inativa-nota { background: var(--papel); border-radius: 12px; padding: 10px 14px; font-weight: 600; }
+.aviso-inativa-sair { margin-top: 6px; }
