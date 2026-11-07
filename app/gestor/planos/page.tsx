@@ -21,6 +21,8 @@ export default async function Planos() {
     { label: 'Valor por peça (mês)', v: (id) => { const p = PLANS[id]; const q = weeklyQuota(p); const n = (q.story + q.post + q.reels) * 4.3; return p.priceBRL == null || !n ? '–' : (p.priceBRL / n).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); } },
     { label: 'Refações por semana', v: (id) => String(PLANS[id].changesPerWeek) },
     { label: 'Análise mensal com especialista', v: (id) => (PLANS[id].humanAnalysis ? 'Sim' : 'Não') },
+    { label: 'Especialista em tráfego e ajuda na arte', v: (id) => (PLANS[id].extras?.length ? 'Sim' : 'Não') },
+    { label: 'Selo', v: (id) => PLANS[id].badge ?? '–' },
   ];
   return (
     <div className="pilha">

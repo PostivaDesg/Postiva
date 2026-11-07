@@ -13,13 +13,16 @@ export interface Plan {
   reelsPerWeek: number;
   humanAnalysis: boolean;  // análise humanizada mensal (Pleno)
   changesPerWeek: number;  // refações com a IA que o cliente pode pedir por semana (somando todos os posts)
+  badge?: string;          // selo mostrado ao cliente (ex.: Super promoção)
+  extras?: string[];       // o que o plano tem a mais, mostrado ao cliente
 }
 
 export const PLANS: Record<PlanId, Plan> = {
   basic:         { id: 'basic',         name: 'Basic',         priceBRL: 400,  storiesPerDay: 3, postsPerDay: 0, reelsPerWeek: 1, humanAnalysis: false, changesPerWeek: 20 },
-  intermediario: { id: 'intermediario', name: 'Intermediário', priceBRL: 600,  storiesPerDay: 5, postsPerDay: 1, reelsPerWeek: 1, humanAnalysis: false, changesPerWeek: 20 },
-  avancado:      { id: 'avancado',      name: 'Avançado',      priceBRL: 800,  storiesPerDay: 6, postsPerDay: 2, reelsPerWeek: 2, humanAnalysis: false, changesPerWeek: 20 },
-  pleno:         { id: 'pleno',         name: 'Pleno',         priceBRL: 1000, storiesPerDay: 6, postsPerDay: 2, reelsPerWeek: 2, humanAnalysis: true,  changesPerWeek: 20 },
+  intermediario: { id: 'intermediario', name: 'Intermediário', priceBRL: 500,  storiesPerDay: 5, postsPerDay: 1, reelsPerWeek: 1, humanAnalysis: false, changesPerWeek: 20 },
+  avancado:      { id: 'avancado',      name: 'Avançado',      priceBRL: 600,  storiesPerDay: 6, postsPerDay: 2, reelsPerWeek: 2, humanAnalysis: false, changesPerWeek: 20, badge: 'Super promoção' },
+  pleno:         { id: 'pleno',         name: 'Pleno',         priceBRL: 1000, storiesPerDay: 6, postsPerDay: 2, reelsPerWeek: 2, humanAnalysis: true,  changesPerWeek: 20,
+                   extras: ['Especialista em tráfego pago acompanhando a sua conta', 'Especialista ajudando nas artes'] },
 };
 
 /** Serviços extras, vendidos à parte (não entram na cota). */

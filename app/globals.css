@@ -251,3 +251,4 @@ input[type='file'] { padding: 9px; background: var(--papel); }
 .plano-card .btn { justify-self: stretch; margin-top: 6px; }
 .faixa-teste { background: var(--fucsia-claro); color: var(--fucsia-escuro); border-radius: 12px; padding: 10px 14px; font-weight: 600; margin-bottom: 16px; }
 .status.pausado { background: #ECEBF3; color: #55537A; }
+.plano-selo { justify-self: start; display: inline-block; background: var(--fucsia); color: #fff; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; text-transform: uppercase; letter-spacing: .03em; }

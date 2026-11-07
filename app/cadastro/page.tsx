@@ -16,6 +16,7 @@ function resumo(id: PlanId) {
   if (p.postsPerDay) partes.push(`${p.postsPerDay} ${p.postsPerDay === 1 ? 'post' : 'posts'} por dia`);
   partes.push(`${p.reelsPerWeek} ${p.reelsPerWeek === 1 ? 'reels' : 'reels'} por semana`);
   if (p.humanAnalysis) partes.push('análise mensal com especialista');
+  if (p.extras) partes.push(...p.extras.map((e) => e.toLowerCase()));
   return partes.join(' · ');
 }
 
@@ -89,7 +90,7 @@ export default function Cadastro() {
             <label key={id} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: 12, borderRadius: 12, cursor: 'pointer',
               border: `2px solid ${v.plan === id ? 'var(--tinta, #2E2A6B)' : 'var(--linha, #E3E1EE)'}` }}>
               <input type="radio" name="plan" value={id} checked={v.plan === id} onChange={set('plan')} style={{ marginTop: 4 }} />
-              <span><strong>{PLANS[id].name} · {brl(PLANS[id].priceBRL)}/mês</strong><br /><span className="muted" style={{ fontSize: 14 }}>{resumo(id)}</span></span>
+              <span><strong>{PLANS[id].name} · {brl(PLANS[id].priceBRL)}/mês</strong>{PLANS[id].badge && <span className="plano-selo" style={{ marginLeft: 8 }}>{PLANS[id].badge}</span>}<br /><span className="muted" style={{ fontSize: 14 }}>{resumo(id)}</span></span>
             </label>
           ))}
           <p className="muted" style={{ margin: 0, fontSize: 13.5 }}>Escolha o plano para testar. Nos 7 dias você não paga nada e não precisa de cartão; no fim do teste você confirma o plano e faz o pagamento.</p>

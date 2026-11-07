@@ -12,6 +12,7 @@ function itens(id: PlanId) {
   l.push(`${p.reelsPerWeek} reels por semana`);
   l.push('Aprovação pelo celular e agendamento automático');
   if (p.humanAnalysis) l.push('Análise mensal com especialista');
+  if (p.extras) l.push(...p.extras);
   return l;
 }
 
@@ -35,6 +36,7 @@ export default function AvisoPlanos({ atual, escolhido }: { atual?: string | nul
             return (
               <form key={id} action={escolherPlano} className={`plano-card${destaque ? ' destaque' : ''}`}>
                 <input type="hidden" name="plan" value={id} />
+                {p.badge && <span className="plano-selo">{p.badge}</span>}
                 <strong className="plano-nome">{p.name}</strong>
                 <span className="plano-preco">{brl(p.priceBRL!)}<small>/mês</small></span>
                 <ul>{itens(id).map((t) => <li key={t}>{t}</li>)}</ul>
