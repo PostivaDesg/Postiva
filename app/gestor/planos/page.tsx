@@ -18,7 +18,7 @@ export default async function Planos() {
     { label: 'Reels por semana', v: (id) => String(PLANS[id].reelsPerWeek) },
     { label: 'Peças por semana', v: (id) => { const q = weeklyQuota(PLANS[id]); return String(q.story + q.post + q.reels); } },
     { label: 'Peças por mês (≈ 4,3 semanas)', v: (id) => { const q = weeklyQuota(PLANS[id]); return String(Math.round((q.story + q.post + q.reels) * 4.3)); } },
-    { label: 'Valor por peça (mês)', v: (id) => { const p = PLANS[id]; const q = weeklyQuota(p); const n = (q.story + q.post + q.reels) * 4.3; return p.priceBRL == null || !n ? '–' : brl(p.priceBRL / n); } },
+    { label: 'Valor por peça (mês)', v: (id) => { const p = PLANS[id]; const q = weeklyQuota(p); const n = (q.story + q.post + q.reels) * 4.3; return p.priceBRL == null || !n ? '–' : (p.priceBRL / n).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); } },
     { label: 'Refações por semana', v: (id) => String(PLANS[id].changesPerWeek) },
     { label: 'Análise mensal com especialista', v: (id) => (PLANS[id].humanAnalysis ? 'Sim' : 'Não') },
   ];
