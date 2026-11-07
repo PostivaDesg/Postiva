@@ -12,8 +12,8 @@ import { pickDirection } from '@/lib/styles';
 
 export interface NewAccount {
   name: string; instagram?: string; segment?: string; city?: string; whatsapp?: string; siteUrl?: string;
-  plan: PlanId; billingType: 'PIX' | 'CREDIT_CARD';
-  clientEmail: string; clientName: string; password: string; cpfCnpj: string;
+  plan: PlanId; billingType?: 'PIX' | 'CREDIT_CARD';
+  clientEmail: string; clientName: string; password: string; cpfCnpj?: string;
 }
 
 export type OnboardResult = { ok: true; companyId: string; userId: string; warnings: string[] } | { ok: false; status: number; error: string };
@@ -27,9 +27,11 @@ export function validateAccount(b: Partial<NewAccount>): string | null {
   if (!b.clientName?.trim()) return 'Informe o seu nome.';
   if (!b.clientEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.clientEmail)) return 'Informe um e-mail válido.';
   if (!b.password || b.password.length < 8) return 'A senha precisa ter pelo menos 8 caracteres.';
+  // CPF/CNPJ e forma de pagamento são opcionais: o cadastro público só cria o teste grátis,
+  // e o pagamento é escolhido quando o teste termina.
   const doc = onlyDigits(b.cpfCnpj);
-  if (doc.length !== 11 && doc.length !== 14) return 'Informe um CPF (11 números) ou CNPJ (14 números).';
-  if (b.billingType !== 'PIX' && b.billingType !== 'CREDIT_CARD') return 'Escolha a forma de pagamento.';
+  if (doc && doc.length !== 11 && doc.length !== 14) return 'Informe um CPF (11 números) ou CNPJ (14 números).';
+  if (b.billingType && b.billingType !== 'PIX' && b.billingType !== 'CREDIT_CARD') return 'Escolha a forma de pagamento.';
   return null;
 }
 
@@ -46,7 +48,7 @@ export async function createAccount(body: NewAccount): Promise<OnboardResult> {
   const { data: company, error: e1 } = await db.from('companies').insert({
     name: body.name.trim(), instagram, segment: body.segment?.trim() || null, city: body.city?.trim() || null,
     whatsapp: body.whatsapp?.trim() || null, plan: body.plan, site_url: body.siteUrl?.trim() || null,
-    cnpj: onlyDigits(body.cpfCnpj), contact_name: body.clientName.trim(), contact_email: email,
+    cnpj: onlyDigits(body.cpfCnpj) || null, contact_name: body.clientName.trim(), contact_email: email,
     bio_code: `bio-${newTrackingCode(6)}`,
     // Direção de arte menos usada no mesmo segmento e cidade: duas empresas nunca saem iguais
     art_style: await pickDirection(toSegment(body.segment), body.city),
@@ -77,17 +79,25 @@ export async function createAccount(body: NewAccount): Promise<OnboardResult> {
     warnings.push(`Pasta do Canva não criada: ${(e as Error).message}`);
   }
 
-  // 5) Assinatura no Asaas com 7 dias de teste + nota fiscal automática
+  // 5) Teste grátis de 7 dias. Sem CPF/CNPJ e forma de pagamento (cadastro público), só registra o teste;
+  //    o cliente escolhe o plano e paga quando o teste termina (aviso no painel).
+  const trialEnd = new Date(Date.now() + 7 * 864e5);
+  if (!onlyDigits(body.cpfCnpj) || !body.billingType) {
+    await db.from('subscriptions').insert({
+      company_id: company.id, status: 'teste', trial_ends_at: trialEnd.toISOString(), next_due_date: trialEnd.toISOString().slice(0, 10),
+    });
+    return { ok: true, companyId: company.id, userId: auth.user.id, warnings };
+  }
+  // Com dados de cobrança (gestor): assinatura no Asaas com 7 dias de teste + nota fiscal automática
   try {
-    const trialEnd = new Date(Date.now() + 7 * 864e5);
-    const customer = await createCustomer({ name: body.name, cpfCnpj: onlyDigits(body.cpfCnpj), email, mobilePhone: body.whatsapp });
+    const customer = await createCustomer({ name: body.name, cpfCnpj: onlyDigits(body.cpfCnpj)!, email, mobilePhone: body.whatsapp });
     const sub = await createSubscription({
-      customer: customer.id, billingType: body.billingType, value: plan.priceBRL!,
+      customer: customer.id, billingType: body.billingType!, value: plan.priceBRL!,
       nextDueDate: trialEnd.toISOString().slice(0, 10), description: `Postiva Design – Plano ${plan.name}`, externalReference: company.id,
     });
     await db.from('subscriptions').insert({
       company_id: company.id, asaas_customer_id: customer.id, asaas_subscription_id: sub.id,
-      billing_type: body.billingType, status: 'teste',
+      billing_type: body.billingType!, status: 'teste',
       trial_ends_at: trialEnd.toISOString(), next_due_date: trialEnd.toISOString().slice(0, 10),
     });
     const nf = await setupInvoices(sub.id).catch((e) => { warnings.push(`Nota fiscal não configurada: ${(e as Error).message}`); return null; });

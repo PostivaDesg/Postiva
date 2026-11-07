@@ -1,7 +1,7 @@
 // Textos e formatos usados em várias telas.
 export const KIND: Record<string, string> = { story: 'Story', post: 'Post', reels: 'Reels' };
 export const STATUS: Record<string, string> = {
-  rascunho: 'Em revisão', aguardando: 'Esperando você', ajuste: 'Em ajuste', aprovado: 'Aprovado',
+  rascunho: 'Em revisão', aguardando: 'Esperando você', ajuste: 'Em ajuste', aprovado: 'Aprovado', pausado: 'Pausado',
   agendado: 'Agendado', publicado: 'Publicado',
 };
 export const STATUS_GESTOR: Record<string, string> = { ...STATUS, rascunho: 'Rascunho', aguardando: 'Com o cliente' };

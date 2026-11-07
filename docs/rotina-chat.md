@@ -33,6 +33,16 @@ depois ler `media_links.url` (vale 10 dias; o Metricool copia o arquivo na hora 
 As rotinas agendadas só fazem artes, refações, pedidos e agendamentos de empresas com `ativa = true`.
 Ao desativar, o gestor escolhe o motivo (`motivo_inativa`: falta_pagamento | teste_expirado | manutencao | outro, mais um
 recado opcional em `nota_inativa`) e o cliente vê um aviso grande por cima do painel com esse motivo.
+Desativar NÃO apaga nada: as peças futuras (aguardando, aprovado, agendado) viram `pausado`, com o status antigo em
+`status_antes_pausa`. A rotina de conferência pausa no Metricool (vira rascunho, `metricool_pausado = true`) e, quando a
+empresa é reativada, devolve o status, reativa no Metricool e remarca para o mesmo horário no próximo dia livre o que já
+passou da data.
+
+## Teste grátis de 7 dias
+O cadastro público (/cadastro) cria a empresa com `subscriptions.status = 'teste'` e `trial_ends_at` = agora + 7 dias, sem
+pedir CPF nem forma de pagamento. Quando vence, o cliente vê um aviso com os planos e escolhe um (`plano_escolhido`); se
+`app_settings` tiver `mp_link_<plano>` (link de pagamento do Mercado Pago), ele vai direto para o pagamento. Depois do
+pagamento, o gestor muda a assinatura para 'ativa'. Teste vencido não recebe artes das rotinas.
 
 ## NanoFarma: stories de oferta com preço do site
 3 stories por dia (09:00, 13:00 e 18:00) com preço lido no site drogariananofarma.com.br (a rotina de quinta roda no

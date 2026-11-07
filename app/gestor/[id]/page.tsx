@@ -10,6 +10,7 @@ import { PLANS, type PlanId } from '@/lib/plans';
 import { artUrl } from '@/lib/art/url';
 import { STATUS_GESTOR, KIND, tz } from '@/lib/ui';
 import { MOTIVOS_INATIVA, motivoInativa, parseMotivo } from '@/lib/inativa';
+import { ativarEmpresa, desativarEmpresa } from '@/lib/pausa';
 
 export default async function ConfigEmpresa({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -26,6 +27,7 @@ export default async function ConfigEmpresa({ params }: { params: Promise<{ id: 
     .eq('company_id', id).gte('scheduled_at', new Date(Date.now() - 864e5).toISOString()).order('scheduled_at').limit(14);
   const { data: sub } = await db.from('subscriptions').select('status, next_due_date').eq('company_id', id).maybeSingle();
   const { count: fb } = await db.from('feedback').select('id', { count: 'exact', head: true }).eq('company_id', id);
+  const { count: pausados } = await db.from('posts').select('id', { count: 'exact', head: true }).eq('company_id', id).eq('status', 'pausado');
   const dir = directionById(company?.art_style);
   const options = ART_DIRECTIONS[toSegment(company?.segment)];
 
@@ -58,11 +60,8 @@ export default async function ConfigEmpresa({ params }: { params: Promise<{ id: 
     'use server';
     const me2 = await currentProfile();
     if (me2?.role !== 'gestor') return;
-    const ligar = form.get('ativa') === 'true';
-    await supabaseAdmin().from('companies').update(ligar
-      ? { ativa: true, motivo_inativa: null, nota_inativa: null, inativa_desde: null }
-      : { ativa: false, motivo_inativa: parseMotivo(form.get('motivo')), nota_inativa: String(form.get('nota') ?? '').trim() || null, inativa_desde: new Date().toISOString() },
-    ).eq('id', id);
+    if (form.get('ativa') === 'true') await ativarEmpresa(id);
+    else await desativarEmpresa(id, parseMotivo(form.get('motivo')), String(form.get('nota') ?? ''));
     revalidatePath(`/gestor/${id}`);
     revalidatePath('/gestor/empresas');
   }
@@ -99,8 +98,8 @@ export default async function ConfigEmpresa({ params }: { params: Promise<{ id: 
         <div className="painel-titulo"><div>
           <h2>{ativa ? 'Produção ativa' : 'Produção desativada'}</h2>
           <p>{ativa
-            ? 'As rotinas agendadas fazem as artes desta empresa. Ao desativar, elas param e o cliente vê um aviso grande no painel com o motivo escolhido.'
-            : `Desativada${company?.inativa_desde ? ` desde ${new Date(company.inativa_desde).toLocaleDateString('pt-BR', { timeZone: tz })}` : ''}. Motivo mostrado ao cliente: ${motivoInativa(company?.motivo_inativa).label}${company?.nota_inativa ? ` (${company.nota_inativa})` : ''}.`}</p>
+            ? `As rotinas agendadas fazem as artes desta empresa. Ao desativar, elas param, as peças futuras ficam pausadas (inclusive no Metricool, na próxima rodada da rotina) e o cliente vê um aviso grande no painel com o motivo escolhido. Nada é apagado: ao reativar, a rotina volta a agendar e remarca o que já passou da data.${pausados ? ` Ainda há ${pausados} ${pausados === 1 ? 'peça pausada' : 'peças pausadas'} sendo devolvidas pela rotina.` : ''}`
+            : `Desativada${company?.inativa_desde ? ` desde ${new Date(company.inativa_desde).toLocaleDateString('pt-BR', { timeZone: tz })}` : ''}. Motivo mostrado ao cliente: ${motivoInativa(company?.motivo_inativa).label}${company?.nota_inativa ? ` (${company.nota_inativa})` : ''}. ${pausados ?? 0} ${pausados === 1 ? 'peça pausada' : 'peças pausadas'}, guardadas para quando a empresa voltar.`}</p>
         </div></div>
         <form action={alternarAtiva} className="acoes" style={{ alignItems: 'end', flexWrap: 'wrap' }}>
           <input type="hidden" name="ativa" value={ativa ? 'false' : 'true'} />

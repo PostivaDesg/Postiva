@@ -21,7 +21,7 @@ function resumo(id: PlanId) {
 
 export default function Cadastro() {
   const router = useRouter();
-  const [v, setV] = useState<Record<string, string>>({ plan: 'basic', billingType: 'PIX', segment: 'Farmácia' });
+  const [v, setV] = useState<Record<string, string>>({ plan: 'basic', segment: 'Farmácia' });
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setV({ ...v, [k]: e.target.value });
@@ -84,7 +84,7 @@ export default function Cadastro() {
         </fieldset>
 
         <fieldset style={{ border: 0, padding: 0, margin: 0, display: 'grid', gap: 10 }}>
-          <legend style={{ fontWeight: 700, marginBottom: 8 }}>Plano</legend>
+          <legend style={{ fontWeight: 700, marginBottom: 8 }}>Plano para testar</legend>
           {(Object.keys(PLANS) as PlanId[]).map((id) => (
             <label key={id} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: 12, borderRadius: 12, cursor: 'pointer',
               border: `2px solid ${v.plan === id ? 'var(--tinta, #2E2A6B)' : 'var(--linha, #E3E1EE)'}` }}>
@@ -92,11 +92,7 @@ export default function Cadastro() {
               <span><strong>{PLANS[id].name} · {brl(PLANS[id].priceBRL)}/mês</strong><br /><span className="muted" style={{ fontSize: 14 }}>{resumo(id)}</span></span>
             </label>
           ))}
-          <div><label htmlFor="billing">Pagamento depois do teste</label>
-            <select id="billing" value={v.billingType} onChange={set('billingType')}>
-              <option value="PIX">Pix</option><option value="CREDIT_CARD">Cartão de crédito</option>
-            </select></div>
-          {campo('cpfCnpj', 'CPF ou CNPJ', { hint: 'Para emitir a cobrança e a nota fiscal. Nada é cobrado nos 7 dias de teste.' })}
+          <p className="muted" style={{ margin: 0, fontSize: 13.5 }}>Escolha o plano para testar. Nos 7 dias você não paga nada e não precisa de cartão; no fim do teste você confirma o plano e faz o pagamento.</p>
         </fieldset>
 
         {/* campo escondido contra robôs */}
@@ -104,7 +100,7 @@ export default function Cadastro() {
           style={{ position: 'absolute', left: '-9999px', width: 1, height: 1, opacity: 0 }} />
 
         {msg && <p role="alert" style={{ margin: 0, color: 'var(--vermelho, #C62828)' }}>{msg}</p>}
-        <button className="btn" disabled={busy}>{busy ? 'Criando sua conta…' : 'Criar conta e começar o teste'}</button>
+        <button className="btn" disabled={busy}>{busy ? 'Criando sua conta…' : 'Começar meus 7 dias grátis'}</button>
       </form>
     </main>
   );

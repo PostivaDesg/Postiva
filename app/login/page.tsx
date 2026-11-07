@@ -50,7 +50,10 @@ export default function LoginPage() {
         {msg && <p role="status" style={{ margin: 0 }}>{msg}</p>}
         <button className="btn" disabled={carregando}>{carregando ? 'Entrando…' : 'Entrar'}</button>
         <button type="button" className="btn ghost" disabled={carregando} onClick={esqueci}>Esqueci a senha</button>
-        <p className="muted" style={{ margin: 0, textAlign: 'center' }}>Ainda não tem conta? <Link href="/cadastro">Criar conta grátis</Link></p>
+        <div style={{ display: 'grid', gap: 8, justifyItems: 'center', borderTop: '1px solid var(--linha)', paddingTop: 16 }}>
+          <p className="muted" style={{ margin: 0 }}>Ainda não tem conta?</p>
+          <Link className="btn ghost" href="/cadastro">Testar 7 dias grátis</Link>
+        </div>
       </form>
     </main>
   );

@@ -16,8 +16,8 @@ export async function POST(req: Request) {
 
   const r = await createAccount({
     name: body.name, instagram: body.instagram, segment: body.segment, city: body.city, whatsapp: body.whatsapp,
-    siteUrl: body.siteUrl, plan: body.plan, billingType: body.billingType,
-    clientEmail: body.clientEmail, clientName: body.clientName, password: body.password, cpfCnpj: body.cpfCnpj,
+    siteUrl: body.siteUrl, plan: body.plan, // sem dados de pagamento: só o teste grátis
+    clientEmail: body.clientEmail, clientName: body.clientName, password: body.password,
   });
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });
   return NextResponse.json({ ok: true });

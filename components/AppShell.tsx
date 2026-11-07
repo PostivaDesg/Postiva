@@ -9,6 +9,8 @@ import SignOut from './SignOut';
 import { Icon } from './icons';
 import { PostivaLogo } from './Logo';
 import { motivoInativa } from '@/lib/inativa';
+import { trialDaysLeft, trialExpired } from '@/lib/trial';
+import AvisoPlanos from './AvisoPlanos';
 
 export default async function AppShell({ children }: { children: ReactNode }) {
   const me = await currentProfile();
@@ -18,7 +20,8 @@ export default async function AppShell({ children }: { children: ReactNode }) {
   let items: NavItem[];
   let who: string;
   let sub: string;
-  let aviso: ReactNode = null; // cliente com empresa desativada: aviso grande por cima de tudo
+  let aviso: ReactNode = null; // cliente com empresa desativada ou teste vencido: aviso grande por cima de tudo
+  let faixa: ReactNode = null; // dias que faltam do teste grátis
   if (me.role === 'gestor') {
     const [{ count: fila }, { count: empresas }] = await Promise.all([
       db.from('posts').select('id', { count: 'exact', head: true }).eq('status', 'rascunho'),
@@ -35,10 +38,15 @@ export default async function AppShell({ children }: { children: ReactNode }) {
     sub = 'Gestor da Postiva';
   } else {
     if (!me.company_id) redirect('/login?erro=sem-empresa');
-    const [{ data: company }, { count: pend }] = await Promise.all([
-      db.from('companies').select('name, ativa, motivo_inativa, nota_inativa').eq('id', me.company_id!).single(),
+    const [{ data: company }, { count: pend }, { data: assin }] = await Promise.all([
+      db.from('companies').select('name, plan, ativa, motivo_inativa, nota_inativa').eq('id', me.company_id!).single(),
       db.from('posts').select('id', { count: 'exact', head: true }).eq('company_id', me.company_id!).eq('status', 'aguardando'),
+      db.from('subscriptions').select('status, trial_ends_at, plano_escolhido').eq('company_id', me.company_id!).maybeSingle(),
     ]);
+    const restam = trialDaysLeft(assin);
+    if (restam != null && restam > 0) {
+      faixa = <div className="faixa-teste" role="status">Teste grátis: {restam === 1 ? 'falta 1 dia' : `faltam ${restam} dias`}.</div>;
+    }
     items = [
       { href: '/painel', label: 'Início', icon: <Icon.inicio /> },
       { href: '/painel/aprovar', label: 'Aprovar posts', icon: <Icon.aprovar />, count: pend ?? 0 },
@@ -64,6 +72,8 @@ export default async function AppShell({ children }: { children: ReactNode }) {
           </div>
         </div>
       );
+    } else if (trialExpired(assin)) {
+      aviso = <AvisoPlanos atual={company?.plan} escolhido={assin?.plano_escolhido} />;
     }
   }
 
@@ -82,7 +92,7 @@ export default async function AppShell({ children }: { children: ReactNode }) {
           <NavLinks items={items} />
         </details>
       </header>
-      <main className="conteudo" inert={aviso ? true : undefined}>{children}</main>
+      <main className="conteudo" inert={aviso ? true : undefined}>{faixa}{children}</main>
       {aviso}
     </div>
   );

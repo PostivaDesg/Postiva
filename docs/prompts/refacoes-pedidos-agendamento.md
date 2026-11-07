@@ -4,6 +4,15 @@ BANCO: Supabase, projeto ccazsjfhbxsrnonakbub (execute_sql). Referência: docs/r
 
 EMPRESA DESATIVADA (botão do gestor): só trabalhe com empresas ativas. Em TODOS os passos abaixo, junte com companies e filtre `companies.ativa = true` (ex.: select p.* from posts p join companies c on c.id=p.company_id where c.ativa and ...). Posts de empresa desativada ficam parados como estão: não refaça, não crie e não agende; só cite no resumo quantos ficaram parados e o motivo (companies.motivo_inativa).
 
+TESTE GRÁTIS VENCIDO: trate como desativada a empresa com subscriptions.status = 'teste' e subscriptions.trial_ends_at <= now() (o cliente vê o aviso para escolher o plano e pagar). Não refaça, não crie e não agende nada dela; cite no resumo (e o plano escolhido, se subscriptions.plano_escolhido estiver preenchido).
+
+PASSO 0 – PAUSAR E REATIVAR (sempre primeiro):
+a) PAUSAR no Metricool: select p.id, p.metricool_post_id, c.metricool_blog_id from posts p join companies c on c.id=p.company_id where not c.ativa and p.status='pausado' and p.metricool_post_id is not null and not p.metricool_pausado. Para cada um, use updateScheduledPost no Metricool (blogId = metricool_blog_id, id = metricool_post_id) deixando o post como rascunho (draft true, autoPublish false), mantendo data, texto e mídia. Não apague o post nem a arte. Depois: update posts set metricool_pausado=true where id=... Se não der para pausar, liste no resumo com o erro.
+b) REATIVAR: select p.* from posts p join companies c on c.id=p.company_id where c.ativa and p.status='pausado' order by p.scheduled_at. Para cada peça:
+   - Data nova: se scheduled_at ainda está mais de 10 minutos no futuro, mantenha. Se já passou, remarque para o MESMO horário no primeiro dia a partir de amanhã em que a empresa não tenha outra peça do mesmo tipo (kind) nesse horário (confira em posts, status diferente de 'expirado'), mantendo a ordem original das peças; atualize scheduled_at (com -03:00).
+   - Status: volte para status_antes_pausa. Se era 'agendado' e tem metricool_post_id: updateScheduledPost no Metricool com a data (nova ou mantida), draft false e autoPublish true; depois update posts set status='agendado', metricool_pausado=false, status_antes_pausa=null. Se o post não existir mais no Metricool, agende de novo como no PASSO 3. Se era 'aprovado', volte para 'aprovado' (o PASSO 3 agenda). Se era 'aguardando', volte para 'aguardando' (com o cliente).
+   - Resumo: quantas peças pausadas e reativadas por empresa, e quais mudaram de data (de → para).
+
 MODELOS DO CANVA (vale para os passos 1 e 2): companies.canva_brand_template_ids. Formato novo (ex.: NanoFarma): story_produto, story_foto, post_produto, post_foto, story_oferta são LISTAS de ids (layouts próprios); "base" = layout parecido com o de outra empresa, permitido em no máximo 1 de cada 10 peças do mês e nunca em dias seguidos; logo_asset = logo. Formato antigo (ex.: Drogaria do Povão): cada chave é um id só. Empresas diferentes não podem ter artes iguais: use os layouts próprios da empresa e alterne (não repita o layout da peça anterior do mesmo tipo). Campos: foto, produto, titulo, texto, cta, logo; modelo *_produto SEMPRE recebe produto; peça sem produto usa *_foto.
 
 PASSO 1 – REFAÇÕES (status 'ajuste'): select p.* from posts p join companies c on c.id=p.company_id where c.ativa and p.status='ajuste'. O motivo do cliente está em change_note. Refaça a peça seguindo o motivo à risca (texto e/ou foto), com as mesmas regras da semana:
@@ -27,4 +36,4 @@ PASSO 3 – AGENDAR APROVADOS NO METRICOOL (status 'aprovado'): select p.*, c.me
 - Depois de cada agendamento: update posts set status='agendado', metricool_post_id='<id>' where id=...
 - Post aprovado cujo horário já passou: não agende; liste no resumo.
 
-PASSO 4 – RESUMO: quantas refações, pedidos e agendamentos por empresa, empresas desativadas (e quantos posts ficaram parados), o que falhou e o que o gestor precisa fazer.
+PASSO 4 – RESUMO: quantas peças pausadas/reativadas/remarcadas, quantas refações, pedidos e agendamentos por empresa, empresas desativadas (e quantos posts ficaram parados), o que falhou e o que o gestor precisa fazer.

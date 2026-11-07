@@ -2,10 +2,11 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
-import { currentProfile, supabaseAdmin } from '@/lib/supabase';
+import { currentProfile } from '@/lib/supabase';
 import { companyEconomics, HOURLY, FIXED } from '@/lib/gestor-data';
 import { brl } from '@/lib/ui';
 import { MOTIVOS_INATIVA, motivoInativa, parseMotivo } from '@/lib/inativa';
+import { ativarEmpresa, desativarEmpresa } from '@/lib/pausa';
 
 export const dynamic = 'force-dynamic';
 const PAG: Record<string, string> = { ativa: 'Em dia', teste: 'Em teste', atrasada: 'Atrasada', cancelada: 'Cancelada' };
@@ -17,11 +18,8 @@ async function alternarAtiva(form: FormData) {
   if (me?.role !== 'gestor') return;
   const id = String(form.get('id') ?? '');
   if (!id) return;
-  const ligar = form.get('ativa') === 'true';
-  await supabaseAdmin().from('companies').update(ligar
-    ? { ativa: true, motivo_inativa: null, nota_inativa: null, inativa_desde: null }
-    : { ativa: false, motivo_inativa: parseMotivo(form.get('motivo')), inativa_desde: new Date().toISOString() },
-  ).eq('id', id);
+  if (form.get('ativa') === 'true') await ativarEmpresa(id);
+  else await desativarEmpresa(id, parseMotivo(form.get('motivo')));
   revalidatePath('/gestor/empresas');
   revalidatePath(`/gestor/${id}`);
 }
