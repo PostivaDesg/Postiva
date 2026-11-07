@@ -19,7 +19,7 @@ export interface Plan {
 
 export const PLANS: Record<PlanId, Plan> = {
   basic:         { id: 'basic',         name: 'Basic',         priceBRL: 400,  storiesPerDay: 3, postsPerDay: 0, reelsPerWeek: 1, humanAnalysis: false, changesPerWeek: 20 },
-  intermediario: { id: 'intermediario', name: 'Intermediário', priceBRL: 500,  storiesPerDay: 5, postsPerDay: 1, reelsPerWeek: 1, humanAnalysis: false, changesPerWeek: 20 },
+  intermediario: { id: 'intermediario', name: 'Intermediário', priceBRL: 500,  storiesPerDay: 5, postsPerDay: 1, reelsPerWeek: 1, humanAnalysis: false, changesPerWeek: 20, badge: 'Recomendado' },
   avancado:      { id: 'avancado',      name: 'Avançado',      priceBRL: 600,  storiesPerDay: 6, postsPerDay: 2, reelsPerWeek: 2, humanAnalysis: false, changesPerWeek: 20, badge: 'Super promoção' },
   pleno:         { id: 'pleno',         name: 'Pleno',         priceBRL: 1000, storiesPerDay: 6, postsPerDay: 2, reelsPerWeek: 2, humanAnalysis: true,  changesPerWeek: 20,
                    extras: ['Especialista em tráfego pago acompanhando a sua conta', 'Especialista ajudando nas artes'] },
