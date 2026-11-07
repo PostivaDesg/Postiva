@@ -2,6 +2,7 @@
 // para o cliente aprovar, sem passar pela revisão da equipe (a equipe só recebe um aviso).
 import { NextResponse } from 'next/server';
 import { currentProfile, supabaseAdmin } from '@/lib/supabase';
+import { blockedResponse } from '@/lib/access';
 import { resolveCompany, monthlyRemaining } from '@/lib/quota';
 import { generateQuick } from '@/lib/claude';
 import { brandWithLearning } from '@/lib/learning';
@@ -33,6 +34,8 @@ export async function POST(req: Request) {
   const { data: company } = await db.from('companies').select('*').eq('id', cid).single();
   const { data: brand } = await db.from('brand_profiles').select('*').eq('company_id', cid).single();
   const { data: sub } = await db.from('subscriptions').select('status').eq('company_id', cid).single();
+  const blocked = await blockedResponse(cid, me.role);
+  if (blocked) return blocked;
   if (!company) return NextResponse.json({ error: 'Empresa não encontrada.' }, { status: 404 });
   if (sub && !['teste', 'ativa'].includes(sub.status)) return NextResponse.json({ error: 'Assinatura pausada.' }, { status: 402 });
 

@@ -2,7 +2,11 @@
 // mas ninguém consegue adivinhar o link de outra arte.
 import { createHmac, timingSafeEqual } from 'crypto';
 
-const secret = () => process.env.ART_SECRET ?? process.env.CRON_SECRET ?? 'troque-ART_SECRET';
+const secret = () => {
+  const s = process.env.ART_SECRET ?? process.env.CRON_SECRET;
+  if (!s) throw new Error('Defina ART_SECRET (ou CRON_SECRET) nas variáveis de ambiente.');
+  return s;
+};
 const sign = (payload: string) => createHmac('sha256', secret()).update(payload).digest('base64url').slice(0, 32);
 
 export function artUrl(postId: string, version = 1, absolute = true) {

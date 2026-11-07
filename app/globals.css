@@ -252,3 +252,48 @@ input[type='file'] { padding: 9px; background: var(--papel); }
 .faixa-teste { background: var(--fucsia-claro); color: var(--fucsia-escuro); border-radius: 12px; padding: 10px 14px; font-weight: 600; margin-bottom: 16px; }
 .status.pausado { background: #ECEBF3; color: #55537A; }
 .plano-selo { justify-self: start; display: inline-block; background: var(--fucsia); color: #fff; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; text-transform: uppercase; letter-spacing: .03em; }
+
+/* Páginas públicas de texto (termos, privacidade) */
+.legal { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; }
+.legal-topo { padding: 8px 0 24px; }
+.legal article h1 { font-size: clamp(28px, 5vw, 38px); margin: 0 0 4px; }
+.legal article h2 { font-size: 20px; margin: 28px 0 8px; }
+.legal article p, .legal article li { font-size: 16px; line-height: 1.65; }
+.legal-rodape { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--linha); font-size: 14px; }
+
+/* Página inicial (vendas) */
+.lp { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+.lp-topo { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 18px 0; flex-wrap: wrap; }
+.lp-topo nav { display: flex; gap: 18px; flex-wrap: wrap; font-weight: 600; }
+.lp-topo nav a { color: var(--texto); text-decoration: none; }
+.lp-hero { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr)); gap: 36px; align-items: center; padding: 32px 0 48px; }
+.lp-hero h1 { font-size: clamp(34px, 6vw, 58px); margin: 14px 0; line-height: 1.05; }
+.lp-hero p { font-size: 18px; color: var(--muted); max-width: 52ch; }
+.lp-selo { display: inline-block; background: var(--fucsia-claro); color: var(--fucsia-escuro); font-weight: 700; padding: 6px 12px; border-radius: 999px; font-size: 14px; }
+.lp-acoes { display: flex; gap: 12px; flex-wrap: wrap; margin: 22px 0 16px; }
+.lp-check { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.lp-check li::before { content: '✓ '; color: var(--verde); font-weight: 800; }
+.lp-mosaico { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.lp-mosaico img, .lp-galeria img { width: 100%; border-radius: 16px; box-shadow: 0 10px 30px rgba(23,21,59,.15); aspect-ratio: 4 / 5; object-fit: cover; background: var(--linha); }
+.lp-mosaico img.story, .lp-galeria img.story { aspect-ratio: 9 / 16; }
+.lp-faixa { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: 12px; background: var(--tinta); color: #fff; border-radius: var(--raio); padding: 22px; }
+.lp-faixa div { display: grid; gap: 2px; }
+.lp-faixa b { font-family: var(--display); font-size: 30px; }
+.lp-faixa span { opacity: .85; font-size: 14.5px; }
+.lp-sec { padding: 56px 0 8px; }
+.lp-sec h2 { font-size: clamp(26px, 4vw, 38px); margin: 0 0 8px; }
+.lp-sub { color: var(--muted); margin: 0 0 20px; }
+.lp-passos { list-style: none; padding: 0; margin: 20px 0 0; display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(min(230px, 100%), 1fr)); counter-reset: lp; }
+.lp-passos li { background: var(--superficie); border: 1px solid var(--linha); border-radius: var(--raio); padding: 18px; display: grid; gap: 6px; counter-increment: lp; }
+.lp-passos li::before { content: counter(lp); width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--fucsia); color: #fff; font-weight: 800; }
+.lp-passos span { color: var(--muted); font-size: 15px; }
+.lp-galeria { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr)); align-items: start; }
+.lp-faq { display: grid; gap: 10px; max-width: 760px; }
+.lp-faq details { background: var(--superficie); border: 1px solid var(--linha); border-radius: 14px; padding: 14px 18px; }
+.lp-faq summary { font-weight: 700; cursor: pointer; }
+.lp-faq p { margin: 10px 0 0; color: var(--muted); }
+.lp-final { margin: 56px 0 0; background: var(--fucsia-claro); border-radius: var(--raio); padding: 36px 20px; text-align: center; display: grid; gap: 16px; justify-items: center; }
+.lp-final h2 { margin: 0; font-size: clamp(24px, 4vw, 34px); }
+.lp-rodape { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 28px 0 36px; color: var(--muted); font-size: 14px; }
+.lp-rodape nav { display: flex; gap: 16px; }
+.lp .plano-card .btn { justify-self: stretch; }

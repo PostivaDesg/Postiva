@@ -14,6 +14,8 @@ export interface NewAccount {
   name: string; instagram?: string; segment?: string; city?: string; whatsapp?: string; siteUrl?: string;
   plan: PlanId; billingType?: 'PIX' | 'CREDIT_CARD';
   clientEmail: string; clientName: string; password: string; cpfCnpj?: string;
+  // questionário do cadastro (obrigatório no cadastro público)
+  address?: string; openingHours?: string; products?: string; audience?: string; delivery?: string; acceptedTerms?: boolean;
 }
 
 export type OnboardResult = { ok: true; companyId: string; userId: string; warnings: string[] } | { ok: false; status: number; error: string };
@@ -27,6 +29,7 @@ export function validateAccount(b: Partial<NewAccount>): string | null {
   if (!b.clientName?.trim()) return 'Informe o seu nome.';
   if (!b.clientEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.clientEmail)) return 'Informe um e-mail válido.';
   if (!b.password || b.password.length < 8) return 'A senha precisa ter pelo menos 8 caracteres.';
+  if (b.siteUrl && !/^https:\/\/[^\s]+\.[^\s]+$/.test(b.siteUrl.trim())) return 'O site precisa começar com https:// (ou deixe em branco).';
   // CPF/CNPJ e forma de pagamento são opcionais: o cadastro público só cria o teste grátis,
   // e o pagamento é escolhido quando o teste termina.
   const doc = onlyDigits(b.cpfCnpj);
@@ -48,7 +51,10 @@ export async function createAccount(body: NewAccount): Promise<OnboardResult> {
   const { data: company, error: e1 } = await db.from('companies').insert({
     name: body.name.trim(), instagram, segment: body.segment?.trim() || null, city: body.city?.trim() || null,
     whatsapp: body.whatsapp?.trim() || null, plan: body.plan, site_url: body.siteUrl?.trim() || null,
-    cnpj: onlyDigits(body.cpfCnpj) || null, contact_name: body.clientName.trim(), contact_email: email,
+    cnpj: onlyDigits(body.cpfCnpj) || null,
+    address: body.address?.trim() || null, opening_hours: body.openingHours?.trim() || null,
+    products: body.products?.trim() || null, audience: body.audience?.trim() || null,
+    termos_aceitos_em: body.acceptedTerms ? new Date().toISOString() : null, contact_name: body.clientName.trim(), contact_email: email,
     bio_code: `bio-${newTrackingCode(6)}`,
     // Direção de arte menos usada no mesmo segmento e cidade: duas empresas nunca saem iguais
     art_style: await pickDirection(toSegment(body.segment), body.city),
@@ -62,14 +68,32 @@ export async function createAccount(body: NewAccount): Promise<OnboardResult> {
     const dup = /already|registered|exists/i.test(e2.message);
     return { ok: false, status: dup ? 409 : 500, error: dup ? 'Já existe uma conta com este e-mail. Entre ou use "Esqueci a senha".' : e2.message };
   }
-  await db.from('profiles').insert({ id: auth.user.id, company_id: company.id, role: 'cliente', full_name: body.clientName.trim() });
+  const { error: eProf } = await db.from('profiles').insert({ id: auth.user.id, company_id: company.id, role: 'cliente', full_name: body.clientName.trim() });
+  if (eProf) {
+    await db.auth.admin.deleteUser(auth.user.id).catch(() => {});
+    await db.from('companies').delete().eq('id', company.id);
+    return { ok: false, status: 500, error: 'Não consegui criar seu acesso. Tente de novo.' };
+  }
 
   // 3) Perfil do Claude já começa com o modelo do segmento; o cliente completa em "Minha marca"
   const starter = SEGMENT_STARTERS[toSegment(body.segment)];
-  await db.from('brand_profiles').insert({
-    company_id: company.id, briefing: starter.briefing, tone: starter.tone, rules: starter.rules,
+  // as respostas do questionário entram no lugar dos [colchetes] do modelo do segmento
+  const fill = (t: string) => t
+    .replace(/\[cidade\/bairro\]|\[cidade\]/g, body.city?.trim() || '$&')
+    .replace(/\[horário\]/g, body.openingHours?.trim() || '$&')
+    .replace(/\[endereço\]/g, body.address?.trim() || '$&')
+    .replace(/\[presencial \/ delivery \/ WhatsApp\]/g, body.delivery?.trim() || '$&');
+  const extra = [
+    body.products?.trim() && `Produtos/serviços que mais vendem: ${body.products.trim()}.`,
+    body.audience?.trim() && `Público: ${body.audience.trim()}.`,
+    body.whatsapp?.trim() && `WhatsApp: ${body.whatsapp.trim()}.`,
+    body.siteUrl?.trim() && `Site: ${body.siteUrl.trim()}.`,
+  ].filter(Boolean).join('\n');
+  const { error: eBrand } = await db.from('brand_profiles').insert({
+    company_id: company.id, briefing: [fill(starter.briefing), extra].filter(Boolean).join('\n'), tone: starter.tone, rules: starter.rules,
     visual: `${starter.visual}\n\nMix de conteúdo: ${starter.mix}`,
   });
+  if (eBrand) warnings.push(`Perfil da marca não criado: ${eBrand.message}`);
 
   // 4) Opcional: pasta da empresa no Canva
   if (process.env.CANVA_CLIENT_ID) try {

@@ -1,6 +1,8 @@
 // Gera a campanha de promoção (posts, stories e reels) a partir dos itens confirmados.
 import { NextResponse } from 'next/server';
 import { currentProfile, supabaseAdmin } from '@/lib/supabase';
+import { chatMode } from '@/lib/mode';
+import { blockedResponse } from '@/lib/access';
 import { generatePromo } from '@/lib/claude';
 import { monthlyRemaining, resolveCompany } from '@/lib/quota';
 import { notifyClient, notifyGestor } from '@/lib/notify';
@@ -54,6 +56,8 @@ export async function POST(req: Request) {
   const { data: sub } = await db.from('subscriptions').select('status').eq('company_id', cid).single();
   if (!company || !brand) return NextResponse.json({ error: 'Empresa não encontrada.' }, { status: 404 });
   if (sub && !['teste', 'ativa'].includes(sub.status)) return NextResponse.json({ error: 'Assinatura pausada.' }, { status: 402 });
+  const blocked = await blockedResponse(cid, me.role);
+  if (blocked) return blocked;
 
   const left = await monthlyRemaining(cid, company.plan as PlanId, new Date(`${body.validFrom}T12:00:00-03:00`));
   if (left.post + left.story + left.reels === 0) {
@@ -67,9 +71,39 @@ export async function POST(req: Request) {
     price_from: it.priceFrom ?? null, price_to: it.priceTo,
     valid_from: body.validFrom, valid_until: body.validUntil,
     is_medicine: !!it.isMedicine, otc_confirmed: !!it.otcConfirmed,
-    needs_review: !!it.isMedicine || !it.photoUrl,
+    needs_review: !!it.isMedicine || !it.photoUrl || !it.ean, // sem EAN não dá para conferir se é remédio: gestor revisa
   }))).select('id, needs_review');
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // modo chat (sem API paga): cada produto vira um pedido na fila; o Claude cria story (com preço) e, se pedido,
+  // post e reels (sem preço) na próxima rodada, com os preços e a validade gravados em promo_items
+  if (await chatMode()) {
+    const queue: Record<string, unknown>[] = [];
+    const left2 = { ...left };
+    const fmt = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const val = `válido de ${body.validFrom.split('-').reverse().join('/')} a ${body.validUntil.split('-').reverse().join('/')} ou enquanto durar o estoque`;
+    body.items.forEach((it, i) => {
+      const desc = `Promoção: ${it.name}${it.brand ? ` (${it.brand})` : ''} por ${fmt(it.priceTo)}${it.priceFrom ? ` (de ${fmt(it.priceFrom)})` : ''}, ${val}.`;
+      const add = (kind: 'story' | 'post' | 'reels', note: string) => {
+        if (left2[kind]-- <= 0) return;
+        queue.push({ company_id: cid, kind, scheduled_at: `${body.validFrom}T${kind === 'story' ? '13' : kind === 'post' ? '19' : '11'}:00:00-03:00`,
+          title: it.name.slice(0, 80), caption: '', status: 'pedido', quick_request: `${desc} ${note}`,
+          promo_item_ids: saved?.[i]?.id ? [saved[i].id] : [], tracking_code: newTrackingCode() });
+      };
+      if (body.formats.storySequence || (!body.formats.postPerItem && !body.formats.reels)) add('story', 'Story com o preço e a validade.');
+      if (body.formats.postPerItem) add('post', 'Post de feed SEM preço (regra da Postiva), destacando o produto.');
+    });
+    if (body.formats.reels && body.items.length) {
+      if (left2.reels-- > 0) queue.push({ company_id: cid, kind: 'reels', scheduled_at: `${body.validFrom}T11:00:00-03:00`,
+        title: 'Promoção', caption: '', status: 'pedido', quick_request: `Reels da promoção (SEM preço) com: ${body.items.map((x) => x.name).join(', ')}.`,
+        promo_item_ids: (saved ?? []).map((x) => x.id), tracking_code: newTrackingCode() });
+    }
+    const { error: e2 } = await db.from('posts').insert(queue);
+    if (e2) return NextResponse.json({ error: 'Não consegui salvar a promoção. Tente de novo.' }, { status: 500 });
+    await notifyGestor(cid, 'pedido', `${company.name} criou uma promoção com ${body.items.length} produto(s): ${queue.length} peça(s) na fila.`).catch(() => {});
+    return NextResponse.json({ created: queue.length, queued: true, waitingClient: 0, waitingReview: 0, cut: 0,
+      message: 'Promoção recebida. As peças chegam para você aprovar em algumas horas.' });
+  }
 
   const { pieces, usage } = await generatePromo({
     brand: buildBrand(company, brand),
@@ -95,7 +129,8 @@ export async function POST(req: Request) {
       tracking_code: newTrackingCode(),
     };
   });
-  await db.from('posts').insert(rows);
+  const { error: e3 } = await db.from('posts').insert(rows);
+  if (e3) return NextResponse.json({ error: 'Não consegui salvar as peças da promoção. Tente de novo.' }, { status: 500 });
   await db.from('ai_usage').insert({ company_id: cid, ...usage });
 
   const waiting = rows.filter((r) => r.status === 'aguardando').length;

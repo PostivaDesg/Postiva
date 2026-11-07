@@ -13,6 +13,7 @@ import { recordFeedback } from '@/lib/learning';
 import { pickWithVision } from '@/lib/art/pick';
 import { withFiveHashtags } from '@/lib/hashtags';
 import { chatMode } from '@/lib/mode';
+import { blockedResponse } from '@/lib/access';
 
 export const maxDuration = 300;
 
@@ -27,6 +28,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const { data: post } = await db.from('posts').select('*').eq('id', id).single();
   if (!post || (me.role !== 'gestor' && post.company_id !== me.company_id)) {
     return NextResponse.json({ error: 'Post não encontrado.' }, { status: 404 });
+  }
+  const blocked = await blockedResponse(post.company_id, me.role);
+  if (blocked) return blocked;
+  // Post já agendado ou publicado não volta para ajuste: a versão antiga continuaria no Metricool e sairia em dobro
+  if (!['aguardando', 'aprovado', 'rascunho'].includes(post.status)) {
+    return NextResponse.json({ error: post.status === 'agendado' || post.status === 'publicado'
+      ? 'Este post já está agendado. Para mudar, fale com a equipe da Postiva.'
+      : 'Este post já está sendo refeito.' }, { status: 409 });
   }
   const { data: company } = await db.from('companies').select('*').eq('id', post.company_id).single();
   const { data: brand } = await db.from('brand_profiles').select('*').eq('company_id', post.company_id).single();
@@ -79,7 +88,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     art_headline: (piece.art_headline ?? post.art_headline ?? piece.title).slice(0, 90),
     art_sub: piece.art_sub ?? null, art_cta: piece.art_cta ?? null,
     art_items: Array.isArray(piece.art_items) ? piece.art_items.slice(0, 4) : post.art_items,
-    status: 'aguardando', change_requests: post.change_requests + 1,
+    status: 'aguardando', change_requests: post.change_requests + 1, released_at: new Date().toISOString(), // novo prazo de aprovação
     art_version: (post.art_version ?? 1) + 1, // a imagem é gerada de novo com o texto novo
     art_photo: piece.art_photo ?? post.art_photo ?? null,
     ...photoPatch,

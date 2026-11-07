@@ -13,15 +13,26 @@ const tokenCost = (u: any) => {
   return (u.input_tokens * inp + u.output_tokens * out + (u.cache_read_tokens ?? 0) * cache) / 1e6;
 };
 
+/** Busca todas as linhas em páginas de 1000 (o Supabase devolve no máximo 1000 por consulta). */
+async function fetchAll<T>(build: (from: number, to: number) => PromiseLike<{ data: T[] | null }>): Promise<T[]> {
+  const out: T[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data } = await build(from, from + 999);
+    out.push(...(data ?? []));
+    if (!data || data.length < 1000) return out;
+  }
+}
+
 export async function companyEconomics() {
   const db = supabaseAdmin();
   const now = new Date();
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 3)).toISOString();
-  const [{ data: companies }, { data: usage }, { data: reviews }, { data: clicks }] = await Promise.all([
+  const since30 = new Date(Date.now() - 30 * 864e5).toISOString();
+  const [{ data: companies }, usage, reviews, clicks] = await Promise.all([
     db.from('companies').select('*, subscriptions(status)').order('name'),
-    db.from('ai_usage').select('company_id, input_tokens, output_tokens, cache_read_tokens, model').gte('created_at', monthStart),
-    db.from('posts').select('company_id, review_seconds').gte('created_at', monthStart),
-    db.from('link_clicks').select('company_id, created_at').gte('created_at', new Date(Date.now() - 30 * 864e5).toISOString()),
+    fetchAll<any>((a, b) => db.from('ai_usage').select('company_id, input_tokens, output_tokens, cache_read_tokens, model').gte('created_at', monthStart).range(a, b)),
+    fetchAll<any>((a, b) => db.from('posts').select('company_id, review_seconds').gte('created_at', monthStart).range(a, b)),
+    fetchAll<any>((a, b) => db.from('link_clicks').select('company_id, created_at').gte('created_at', since30).range(a, b)),
   ]);
   const statusOf = (c: any) => ((Array.isArray(c.subscriptions) ? c.subscriptions[0] : c.subscriptions)?.status as string | undefined) ?? 'sem assinatura';
   const paying = (companies ?? []).filter((c) => statusOf(c) === 'ativa');

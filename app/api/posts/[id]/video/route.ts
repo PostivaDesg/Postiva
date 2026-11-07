@@ -3,6 +3,7 @@
 import { NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import { currentProfile, supabaseAdmin } from '@/lib/supabase';
+import { blockedResponse } from '@/lib/access';
 import { schedulePostNow } from '@/lib/approve';
 
 const TYPES = ['video/mp4', 'video/quicktime'];
@@ -16,6 +17,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const db = supabaseAdmin();
   const { data: post } = await db.from('posts').select('id, company_id, kind, status').eq('id', id).single();
   if (!post || (me.role !== 'gestor' && post.company_id !== me.company_id)) return NextResponse.json({ error: 'Post não encontrado.' }, { status: 404 });
+  const blocked = await blockedResponse(post.company_id, me.role);
+  if (blocked) return blocked;
   if (post.kind !== 'reels') return NextResponse.json({ error: 'Só reels recebem vídeo.' }, { status: 400 });
 
   const b = await req.json() as { action: 'link' | 'pronto'; type?: string; size?: number; path?: string };

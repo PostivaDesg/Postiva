@@ -2,7 +2,7 @@
 export const KIND: Record<string, string> = { story: 'Story', post: 'Post', reels: 'Reels' };
 export const STATUS: Record<string, string> = {
   rascunho: 'Em revisão', aguardando: 'Esperando você', ajuste: 'Em ajuste', aprovado: 'Aprovado', pausado: 'Pausado',
-  agendado: 'Agendado', publicado: 'Publicado',
+  agendado: 'Agendado', publicado: 'Publicado', pedido: 'Sendo criado', expirado: 'Descartado',
 };
 export const STATUS_GESTOR: Record<string, string> = { ...STATUS, rascunho: 'Rascunho', aguardando: 'Com o cliente' };
 export const tz = 'America/Sao_Paulo';

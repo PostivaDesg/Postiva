@@ -63,6 +63,7 @@ export default function Promocoes() {
     }).catch(() => null);
     const j = r ? await readJSON(r) : { error: 'Sem conexão com o servidor. Tente de novo.' }; setBusy(false);
     if (!r?.ok) return setMsg(j.error);
+    if (j.queued) { setItems([]); return setMsg(j.message); }
     setMsg(`${j.created} peças criadas. ${j.waitingClient} já estão no seu painel para aprovar` +
       (j.waitingReview ? `; ${j.waitingReview} passam antes pela revisão da equipe.` : '.') +
       (j.cut ? ` ${j.cut} não couberam na cota do mês.` : ''));

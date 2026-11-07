@@ -17,7 +17,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ code: s
   const { data: company } = await db.from('companies').select('name, whatsapp, instagram, site_url').eq('id', companyId).single();
   await db.from('link_clicks').insert({ company_id: companyId, post_id: post?.id ?? null, code });
 
-  if (!company?.whatsapp) return NextResponse.redirect(company?.site_url ?? `https://instagram.com/${(company?.instagram ?? '').replace('@', '')}`);
+  if (!company?.whatsapp) {
+    // só segue para o site da empresa se for um endereço https válido; senão vai para o Instagram dela
+    const site = /^https:\/\/[^\s]+$/.test(company?.site_url ?? '') ? company!.site_url! : null;
+    const ig = `https://instagram.com/${encodeURIComponent((company?.instagram ?? '').replace('@', ''))}`;
+    return NextResponse.redirect(site ?? ig);
+  }
   const msg = post
     ? `Olá! Vi no Instagram: "${post.title}". (código ${code})`
     : `Olá! Vim pelo Instagram da ${company.name}. (código ${code})`;

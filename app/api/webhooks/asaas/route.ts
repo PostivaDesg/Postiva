@@ -1,11 +1,14 @@
 // Webhook do Asaas: mantém o status da assinatura em dia.
 // No painel do Asaas, cadastre https://SEU-DOMINIO/api/webhooks/asaas com o token ASAAS_WEBHOOK_TOKEN.
 import { NextResponse } from 'next/server';
+import { timingSafeEqual } from 'crypto';
 import { supabaseAdmin } from '@/lib/supabase';
 import { notifyClient, notifyGestor, today } from '@/lib/notify';
 
 export async function POST(req: Request) {
-  if (req.headers.get('asaas-access-token') !== process.env.ASAAS_WEBHOOK_TOKEN) {
+  const got = Buffer.from(req.headers.get('asaas-access-token') ?? '');
+  const want = Buffer.from(process.env.ASAAS_WEBHOOK_TOKEN ?? '');
+  if (!want.length || got.length !== want.length || !timingSafeEqual(got, want)) {
     return NextResponse.json({ error: 'token inválido' }, { status: 401 });
   }
   const evt = await req.json().catch(() => ({})) as { event?: string; payment?: { subscription?: string; dueDate?: string } };
@@ -36,7 +39,9 @@ export async function POST(req: Request) {
   }
   if (status) {
     await db.from('subscriptions')
-      .update({ status, next_due_date: evt.payment?.dueDate ?? null, updated_at: new Date().toISOString() })
+      .update({ status, next_due_date: evt.payment?.dueDate ?? null, updated_at: new Date().toISOString(),
+        // pagamento pelo sistema de cobrança vale mais que o "+30 dias" manual
+        ...(status === 'ativa' ? { pago_ate: null } : {}) })
       .eq('company_id', sub.company_id);
   }
   return NextResponse.json({ ok: true });

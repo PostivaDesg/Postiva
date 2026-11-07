@@ -1,6 +1,6 @@
 'use client';
 // Cadastro público: a empresa cria a própria conta, escolhe o plano e começa com 7 dias de teste.
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
@@ -24,6 +24,11 @@ export default function Cadastro() {
   const router = useRouter();
   const [v, setV] = useState<Record<string, string>>({ plan: 'basic', segment: 'Farmácia' });
   const [busy, setBusy] = useState(false);
+  // plano escolhido na página inicial (/cadastro?plano=avancado)
+  useEffect(() => {
+    const pl = new URLSearchParams(window.location.search).get('plano');
+    if (pl && pl in PLANS) setV((old) => ({ ...old, plan: pl }));
+  }, []);
   const [msg, setMsg] = useState<string | null>(null);
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setV({ ...v, [k]: e.target.value });
 
@@ -31,7 +36,7 @@ export default function Cadastro() {
     e.preventDefault();
     if (v.password !== v.password2) return setMsg('As duas senhas não são iguais.');
     setBusy(true); setMsg(null);
-    const r = await postJSON('/api/cadastro', v);
+    const r = await postJSON('/api/cadastro', { ...v, acceptedTerms: v.acceptedTerms === 'true' });
     if (!r.ok) { setBusy(false); return setMsg(r.error); }
     const sb = createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
     const { error } = await sb.auth.signInWithPassword({ email: v.clientEmail.trim().toLowerCase(), password: v.password });
@@ -73,7 +78,24 @@ export default function Cadastro() {
           {campo('city', 'Cidade')}
           {campo('whatsapp', 'WhatsApp da empresa', { type: 'tel', hint: 'Vai no botão dos posts para o cliente chamar.' })}
           {campo('instagram', '@ do Instagram', { required: false })}
-          {campo('siteUrl', 'Site', { type: 'url', required: false })}
+          {campo('siteUrl', 'Site ou catálogo on-line', { type: 'url', required: false, hint: 'Se tiver, usamos as fotos e os preços dos produtos nas artes.' })}
+        </fieldset>
+
+        <fieldset style={{ border: 0, padding: 0, margin: 0, display: 'grid', gap: 14 }}>
+          <legend style={{ fontWeight: 700, marginBottom: 8 }}>Sobre o seu negócio</legend>
+          <p className="muted" style={{ margin: 0, fontSize: 13.5 }}>Com isso as artes do teste já saem com a cara da sua empresa.</p>
+          {campo('address', 'Endereço (rua, número e bairro)', { auto: 'street-address' })}
+          {campo('openingHours', 'Horário de funcionamento', { hint: 'Ex.: Seg a sáb, 8h às 22h; domingo, 8h às 14h' })}
+          <div><label htmlFor="delivery">Como o cliente compra</label>
+            <select id="delivery" value={v.delivery ?? ''} onChange={set('delivery')} required>
+              <option value="" disabled>Escolha</option>
+              <option>Presencial e WhatsApp</option><option>Presencial, WhatsApp e entrega</option>
+              <option>Presencial, WhatsApp, entrega e iFood</option><option>Só presencial</option>
+            </select></div>
+          <div><label htmlFor="products">Os 3 produtos ou serviços que mais vendem</label>
+            <textarea id="products" rows={2} required value={v.products ?? ''} onChange={(e) => setV({ ...v, products: e.target.value })}
+              placeholder="Ex.: fraldas, dipirona, protetor solar" /></div>
+          {campo('audience', 'Quem é o seu cliente', { required: false, hint: 'Ex.: famílias do bairro, idosos, turistas no verão' })}
         </fieldset>
 
         <fieldset style={{ border: 0, padding: 0, margin: 0, display: 'grid', gap: 14 }}>
@@ -99,6 +121,11 @@ export default function Cadastro() {
         {/* campo escondido contra robôs */}
         <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" value={v.website ?? ''} onChange={set('website')}
           style={{ position: 'absolute', left: '-9999px', width: 1, height: 1, opacity: 0 }} />
+
+        <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontWeight: 500 }}>
+          <input type="checkbox" required checked={v.acceptedTerms === 'true'} onChange={(e) => setV({ ...v, acceptedTerms: e.target.checked ? 'true' : '' })} style={{ width: 'auto', marginTop: 4 }} />
+          <span>Li e aceito os <Link href="/termos" target="_blank">Termos de uso</Link> e a <Link href="/privacidade" target="_blank">Política de privacidade</Link>.</span>
+        </label>
 
         {msg && <p role="alert" style={{ margin: 0, color: 'var(--vermelho, #C62828)' }}>{msg}</p>}
         <button className="btn" disabled={busy}>{busy ? 'Criando sua conta…' : 'Começar meus 7 dias grátis'}</button>

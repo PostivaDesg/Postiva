@@ -5,7 +5,9 @@ import { supabaseUser } from '@/lib/supabase';
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const code = url.searchParams.get('code');
-  const next = url.searchParams.get('next')?.startsWith('/') ? url.searchParams.get('next')! : '/conta';
+  const raw = url.searchParams.get('next') ?? '';
+  // só caminhos internos ("/conta"), nunca "//site.com" ou "/\site.com"
+  const next = /^\/(?![\/\\])/.test(raw) ? raw : '/conta';
   if (code) {
     const sb = await supabaseUser();
     const { error } = await sb.auth.exchangeCodeForSession(code);

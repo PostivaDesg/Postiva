@@ -15,6 +15,7 @@ export async function schedulePostNow(postId: string) {
   const db = supabaseAdmin();
   const { data: post } = await db.from('posts').select('*, companies(metricool_blog_id, name)').eq('id', postId).single();
   if (!post) return 'inexistente';
+  if (post.metricool_post_id) return 'agendado'; // já está no Metricool: não agenda de novo
   const rel = post.companies as any;
   const company = Array.isArray(rel) ? rel[0] : rel;
   if (!company?.metricool_blog_id) return 'aprovado'; // sem Metricool configurado: o alerta avisa o gestor
@@ -44,7 +45,9 @@ export async function approvePost(postId: string, manual = true) {
   const db = supabaseAdmin();
   const { data: post } = await db.from('posts').select('id, status, kind, video_path, company_id, title, art_photo').eq('id', postId).single();
   if (!post || post.status !== 'aguardando') return { ok: false as const, status: post?.status ?? 'inexistente' };
-  await db.from('posts').update({ status: 'aprovado' }).eq('id', postId);
+  // trava: só aprova quem ainda está 'aguardando' (evita agendar em dobro com "Aprovar todos" + aprovação automática)
+  const { data: won } = await db.from('posts').update({ status: 'aprovado' }).eq('id', postId).eq('status', 'aguardando').select('id');
+  if (!won?.length) return { ok: false as const, status: 'já aprovado' };
   if (manual) await recordFeedback(post.company_id, 'aprovado', { post_kind: post.kind, title: post.title, art_photo: post.art_photo });
   if (post.kind === 'reels' && !post.video_path && !(await chatMode())) {
     // a Postiva monta o vídeo sozinha (fotos + frases + logo); o cliente só envia vídeo se quiser um reels com o dele
