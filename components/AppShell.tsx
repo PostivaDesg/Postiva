@@ -33,6 +33,7 @@ export default async function AppShell({ children }: { children: ReactNode }) {
       { href: '/gestor/empresas', label: `Empresas (${empresas ?? 0})`, icon: <Icon.empresas /> },
       { href: '/gestor/nova', label: 'Nova empresa', icon: <Icon.nova /> },
       { href: '/gestor/diagnostico', label: 'Diagnóstico', icon: <Icon.diagnostico />, group: 'Sistema' },
+      { href: '/gestor/planos', label: 'Planos e valores', icon: <Icon.relatorio /> },
     ];
     who = me.full_name ?? 'Gestor';
     sub = 'Gestor da Postiva';
